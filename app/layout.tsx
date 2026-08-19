@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { SITE_URL, SITE_NAME } from "@/lib/site-config";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -12,9 +13,24 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const DEFAULT_DESCRIPTION =
+  "SSC, HSC, University, IELTS, Spoken English, Grammar, and Vocabulary lessons for students in Bangladesh.";
+
 export const metadata: Metadata = {
-  title: "EnglishHero101",
-  description: "An English learning platform for students in Bangladesh.",
+  metadataBase: new URL(SITE_URL),
+  title: `${SITE_NAME} — Learn English Online`,
+  description: DEFAULT_DESCRIPTION,
+  openGraph: {
+    type: "website",
+    siteName: SITE_NAME,
+    title: `${SITE_NAME} — Learn English Online`,
+    description: DEFAULT_DESCRIPTION,
+  },
+  twitter: {
+    card: "summary",
+    title: `${SITE_NAME} — Learn English Online`,
+    description: DEFAULT_DESCRIPTION,
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

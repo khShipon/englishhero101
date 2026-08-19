@@ -20,9 +20,15 @@ export async function generateMetadata({
 
   const node = await getNodeBySlugPath(slug);
   if (node && node.isPublished) {
+    const title = node.seoTitle || `${node.title} — EnglishHero101`;
+    const description = node.seoDescription || node.description || undefined;
+    const canonical = `/${slug.join("/")}`;
     return {
-      title: node.seoTitle || `${node.title} — EnglishHero101`,
-      description: node.seoDescription || node.description || undefined,
+      title,
+      description,
+      alternates: { canonical },
+      openGraph: { title, description, url: canonical, type: "website" },
+      twitter: { title, description },
     };
   }
 
@@ -33,9 +39,15 @@ export async function generateMetadata({
     if (parentNode) {
       const lesson = await getPublishedLessonBySlugAndNode(parentNode.id, lessonSlug);
       if (lesson) {
+        const title = lesson.seoTitle || `${lesson.title} — EnglishHero101`;
+        const description = lesson.seoDescription || lesson.excerpt || undefined;
+        const canonical = `/${slug.join("/")}`;
         return {
-          title: lesson.seoTitle || `${lesson.title} — EnglishHero101`,
-          description: lesson.seoDescription || lesson.excerpt || undefined,
+          title,
+          description,
+          alternates: { canonical },
+          openGraph: { title, description, url: canonical, type: "article" },
+          twitter: { title, description },
         };
       }
     }

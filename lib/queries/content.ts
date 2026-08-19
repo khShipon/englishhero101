@@ -124,6 +124,27 @@ export const getContentTree = cache(async (): Promise<ContentTreeNode[]> => {
   return buildContentTree((data ?? []).map(mapNode));
 });
 
+// Explicitly filtered rather than relying on RLS — this backs the
+// sitemap, which must never include draft nodes regardless of who (if
+// anyone) is authenticated when it's built. Known edge case: a
+// published node whose *parent* is unpublished gets promoted to root
+// by buildContentTree (its real parent isn't in this filtered set),
+// which could produce a sitemap URL that isn't actually reachable.
+// Acceptable trade-off — publishing a child under an unpublished
+// parent is an unusual admin action, and the failure mode is just a
+// stray 404, not a content leak.
+export const getPublishedContentTree = cache(async (): Promise<ContentTreeNode[]> => {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("content_nodes")
+    .select(NODE_COLUMNS)
+    .eq("is_published", true)
+    .order("sort_order");
+
+  if (error) throw error;
+  return buildContentTree((data ?? []).map(mapNode));
+});
+
 // Direct children of a node, or top-level categories when parentId is null.
 export const getChildren = cache(async (parentId: string | null): Promise<ContentNode[]> => {
   const supabase = await createClient();
