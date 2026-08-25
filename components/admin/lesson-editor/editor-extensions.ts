@@ -2,6 +2,7 @@ import StarterKit from "@tiptap/starter-kit";
 import { TableKit } from "@tiptap/extension-table";
 import Placeholder from "@tiptap/extension-placeholder";
 import { Callout } from "./callout-node";
+import { Pronounce } from "./pronounce-node";
 
 // Only the node/mark types types/lesson-content.ts validates and
 // LessonRenderer knows how to render are enabled here — anything
@@ -21,6 +22,7 @@ export const lessonEditorExtensions = [
     table: { resizable: false },
   }),
   Callout,
+  Pronounce,
   Placeholder.configure({
     placeholder: "Start writing the lesson...",
   }),

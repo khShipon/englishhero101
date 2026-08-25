@@ -1,10 +1,14 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/auth/dal";
 import { lessonSchema } from "@/lib/admin/lesson-validation";
+
+// Matches the cacheTag() calls in lib/queries/lessons.ts's public-site
+// functions.
+const LESSONS_TAG = "lessons";
 
 export type LessonFormState =
   | {
@@ -81,6 +85,7 @@ export async function createLesson(
   }
 
   revalidatePath(`/admin/content/${data.node_id}/lessons`);
+  updateTag(LESSONS_TAG);
   redirect(`/admin/content/${data.node_id}/lessons`);
 }
 
@@ -144,6 +149,7 @@ export async function updateLesson(
   }
 
   revalidatePath(`/admin/content/${data.node_id}/lessons`);
+  updateTag(LESSONS_TAG);
   redirect(`/admin/content/${data.node_id}/lessons`);
 }
 
@@ -160,6 +166,7 @@ export async function deleteLesson(formData: FormData) {
   }
 
   revalidatePath(`/admin/content/${nodeId}/lessons`);
+  updateTag(LESSONS_TAG);
 }
 
 export async function archiveLesson(formData: FormData) {
@@ -175,4 +182,5 @@ export async function archiveLesson(formData: FormData) {
   }
 
   revalidatePath(`/admin/content/${nodeId}/lessons`);
+  updateTag(LESSONS_TAG);
 }

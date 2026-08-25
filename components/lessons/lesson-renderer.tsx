@@ -1,6 +1,7 @@
 import type { LessonContent, LessonNode } from "@/types/lesson-content";
 import { createHeadingIdAssigner } from "@/lib/lessons/heading-ids";
 import { extractText } from "@/lib/lessons/extract-headings";
+import { PronounceButton } from "@/components/lessons/pronounce-button";
 
 // Every branch maps a known, schema-validated node type straight to a
 // React element. There is no dangerouslySetInnerHTML anywhere in this
@@ -83,6 +84,8 @@ function renderNode(node: LessonNode, key: React.Key, assignId: AssignId): React
           {renderChildren(node.content, assignId)}
         </div>
       );
+    case "pronounce":
+      return <PronounceButton key={key} text={node.attrs.text} />;
     default:
       return null;
   }

@@ -1,7 +1,11 @@
 import "server-only";
 import { cache } from "react";
+import { cacheLife, cacheTag } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { createPublicClient } from "@/lib/supabase/public";
 import type { LessonContent } from "@/types/lesson-content";
+
+const LESSONS_TAG = "lessons";
 
 export type LessonStatus = "draft" | "published" | "archived";
 
@@ -94,24 +98,33 @@ export const getLessonById = cache(async (id: string): Promise<Lesson | null> =>
 // in thanks to their elevated read access — so these explicitly filter
 // on status/is_published too, independent of RLS.
 
-export const getPublishedLessonBySlugAndNode = cache(
-  async (nodeId: string, slug: string): Promise<Lesson | null> => {
-    const supabase = await createClient();
-    const { data, error } = await supabase
-      .from("lessons")
-      .select(LESSON_COLUMNS)
-      .eq("node_id", nodeId)
-      .eq("slug", slug)
-      .eq("status", "published")
-      .maybeSingle();
+export async function getPublishedLessonBySlugAndNode(
+  nodeId: string,
+  slug: string,
+): Promise<Lesson | null> {
+  "use cache";
+  cacheLife("hours");
+  cacheTag(LESSONS_TAG);
 
-    if (error) throw error;
-    return data ? mapLesson(data) : null;
-  },
-);
+  const supabase = createPublicClient();
+  const { data, error } = await supabase
+    .from("lessons")
+    .select(LESSON_COLUMNS)
+    .eq("node_id", nodeId)
+    .eq("slug", slug)
+    .eq("status", "published")
+    .maybeSingle();
 
-export const getPublishedLessonsByNode = cache(async (nodeId: string): Promise<Lesson[]> => {
-  const supabase = await createClient();
+  if (error) throw error;
+  return data ? mapLesson(data) : null;
+}
+
+export async function getPublishedLessonsByNode(nodeId: string): Promise<Lesson[]> {
+  "use cache";
+  cacheLife("hours");
+  cacheTag(LESSONS_TAG);
+
+  const supabase = createPublicClient();
   const { data, error } = await supabase
     .from("lessons")
     .select(LESSON_COLUMNS)
@@ -121,44 +134,52 @@ export const getPublishedLessonsByNode = cache(async (nodeId: string): Promise<L
 
   if (error) throw error;
   return (data ?? []).map(mapLesson);
-});
+}
 
 // "Sequence" within a node is approximated by creation order, since
 // lessons (unlike content_nodes/questions) have no sort_order column.
-export const getAdjacentLessons = cache(
-  async (
-    nodeId: string,
-    currentLessonId: string,
-  ): Promise<{ previous: Lesson | null; next: Lesson | null }> => {
-    const siblings = await getPublishedLessonsByNode(nodeId);
-    const index = siblings.findIndex((lesson) => lesson.id === currentLessonId);
-    if (index === -1) return { previous: null, next: null };
-    return {
-      previous: index > 0 ? siblings[index - 1] : null,
-      next: index < siblings.length - 1 ? siblings[index + 1] : null,
-    };
-  },
-);
+export async function getAdjacentLessons(
+  nodeId: string,
+  currentLessonId: string,
+): Promise<{ previous: Lesson | null; next: Lesson | null }> {
+  "use cache";
+  cacheLife("hours");
+  cacheTag(LESSONS_TAG);
 
-export const getRelatedLessons = cache(
-  async (nodeId: string, excludeId: string, limit = 4): Promise<Lesson[]> => {
-    const supabase = await createClient();
-    const { data, error } = await supabase
-      .from("lessons")
-      .select(LESSON_COLUMNS)
-      .eq("node_id", nodeId)
-      .eq("status", "published")
-      .neq("id", excludeId)
-      .order("created_at", { ascending: false })
-      .limit(limit);
+  const siblings = await getPublishedLessonsByNode(nodeId);
+  const index = siblings.findIndex((lesson) => lesson.id === currentLessonId);
+  if (index === -1) return { previous: null, next: null };
+  return {
+    previous: index > 0 ? siblings[index - 1] : null,
+    next: index < siblings.length - 1 ? siblings[index + 1] : null,
+  };
+}
 
-    if (error) throw error;
-    return (data ?? []).map(mapLesson);
-  },
-);
+export async function getRelatedLessons(nodeId: string, excludeId: string, limit = 4): Promise<Lesson[]> {
+  "use cache";
+  cacheLife("hours");
+  cacheTag(LESSONS_TAG);
 
-export const getRecentPublishedLessons = cache(async (limit = 6): Promise<Lesson[]> => {
-  const supabase = await createClient();
+  const supabase = createPublicClient();
+  const { data, error } = await supabase
+    .from("lessons")
+    .select(LESSON_COLUMNS)
+    .eq("node_id", nodeId)
+    .eq("status", "published")
+    .neq("id", excludeId)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  if (error) throw error;
+  return (data ?? []).map(mapLesson);
+}
+
+export async function getRecentPublishedLessons(limit = 6): Promise<Lesson[]> {
+  "use cache";
+  cacheLife("hours");
+  cacheTag(LESSONS_TAG);
+
+  const supabase = createPublicClient();
   const { data, error } = await supabase
     .from("lessons")
     .select(LESSON_COLUMNS)
@@ -168,13 +189,17 @@ export const getRecentPublishedLessons = cache(async (limit = 6): Promise<Lesson
 
   if (error) throw error;
   return (data ?? []).map(mapLesson);
-});
+}
 
 // Lessons that belong to a category the admin has marked "featured"
 // (content_nodes.is_featured) — reuses that existing column rather
 // than adding a separate per-lesson flag.
-export const getFeaturedLessons = cache(async (limit = 6): Promise<Lesson[]> => {
-  const supabase = await createClient();
+export async function getFeaturedLessons(limit = 6): Promise<Lesson[]> {
+  "use cache";
+  cacheLife("hours");
+  cacheTag(LESSONS_TAG);
+
+  const supabase = createPublicClient();
   const { data, error } = await supabase
     .from("lessons")
     .select(`${LESSON_COLUMNS}, content_nodes!inner(is_featured)`)
@@ -185,4 +210,4 @@ export const getFeaturedLessons = cache(async (limit = 6): Promise<Lesson[]> => 
 
   if (error) throw error;
   return (data ?? []).map(mapLesson);
-});
+}

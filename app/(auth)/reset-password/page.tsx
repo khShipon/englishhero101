@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { ResetPasswordForm } from "@/components/auth/reset-password-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,7 +8,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export const metadata: Metadata = { title: "Reset password — EnglishHero101" };
 
-export default async function ResetPasswordPage() {
+async function ResetPasswordGate() {
   const supabase = await createClient();
   const {
     data: { user },
@@ -35,4 +36,12 @@ export default async function ResetPasswordPage() {
   }
 
   return <ResetPasswordForm />;
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <Suspense fallback={null}>
+      <ResetPasswordGate />
+    </Suspense>
+  );
 }

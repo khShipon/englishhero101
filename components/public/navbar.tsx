@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import { getChildren } from "@/lib/queries/content";
 import { getCurrentUser } from "@/lib/auth/dal";
@@ -7,8 +8,35 @@ import { buttonVariants } from "@/components/ui/button";
 import { User } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+// Reads the session cookie, so it's the one part of the navbar that
+// can't be part of the static shell — isolated behind its own
+// Suspense boundary (see AuthLink below) so the categories list and
+// the rest of the page can still be cached/prerendered.
+async function AuthLink() {
+  const user = await getCurrentUser();
+  return (
+    <Link
+      href={user ? "/profile" : "/login"}
+      className={cn(buttonVariants({ variant: "outline", size: "sm" }), "shrink-0")}
+    >
+      <User /> {user ? "Profile" : "Login"}
+    </Link>
+  );
+}
+
+function AuthLinkFallback() {
+  return (
+    <span
+      aria-hidden
+      className={cn(buttonVariants({ variant: "outline", size: "sm" }), "shrink-0 opacity-0")}
+    >
+      <User /> Login
+    </span>
+  );
+}
+
 export async function Navbar() {
-  const [categories, user] = await Promise.all([getChildren(null), getCurrentUser()]);
+  const categories = await getChildren(null);
   const publishedCategories = categories.filter((category) => category.isPublished);
 
   return (
@@ -43,12 +71,9 @@ export async function Navbar() {
           ))}
         </nav>
         <SearchBox className="hidden max-w-xs shrink-0 lg:block" />
-        <Link
-          href={user ? "/profile" : "/login"}
-          className={cn(buttonVariants({ variant: "outline", size: "sm" }), "shrink-0")}
-        >
-          <User /> {user ? "Profile" : "Login"}
-        </Link>
+        <Suspense fallback={<AuthLinkFallback />}>
+          <AuthLink />
+        </Suspense>
       </div>
     </header>
   );

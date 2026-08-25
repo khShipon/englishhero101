@@ -1,6 +1,7 @@
 import "server-only";
+import { cacheLife, cacheTag } from "next/cache";
 import { getPublishedContentTree } from "@/lib/queries/content";
-import { createClient } from "@/lib/supabase/server";
+import { createPublicClient } from "@/lib/supabase/public";
 import type { ContentTreeNode } from "@/types/content";
 
 export type SitemapPath = { url: string; lastModified: string };
@@ -30,6 +31,10 @@ export async function getSitemapPaths(): Promise<{
   nodePaths: SitemapPath[];
   lessonPaths: SitemapPath[];
 }> {
+  "use cache";
+  cacheLife("hours");
+  cacheTag("content-nodes", "lessons");
+
   const tree = await getPublishedContentTree();
   const pathMap = flattenNodePaths(tree);
 
@@ -38,7 +43,7 @@ export async function getSitemapPaths(): Promise<{
     lastModified: entry.updatedAt,
   }));
 
-  const supabase = await createClient();
+  const supabase = createPublicClient();
   const { data: lessons } = await supabase
     .from("lessons")
     .select("slug, node_id, updated_at")

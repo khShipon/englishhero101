@@ -40,7 +40,8 @@ export type LessonNode =
   | { type: "tableCell"; content?: LessonNode[] }
   | { type: "tableHeader"; content?: LessonNode[] }
   | { type: "hardBreak" }
-  | { type: "callout"; attrs: { variant: CalloutVariant }; content?: LessonNode[] };
+  | { type: "callout"; attrs: { variant: CalloutVariant }; content?: LessonNode[] }
+  | { type: "pronounce"; attrs: { text: string } };
 
 // Whitelist-based, recursive: only node/mark types the editor and
 // renderer both know about survive validation. This is what makes
@@ -70,6 +71,10 @@ const lessonNodeSchema: z.ZodType<LessonNode> = z.lazy(() =>
       type: z.literal("callout"),
       attrs: z.object({ variant: z.enum(CALLOUT_VARIANTS) }),
       content: z.array(lessonNodeSchema).optional(),
+    }),
+    z.object({
+      type: z.literal("pronounce"),
+      attrs: z.object({ text: z.string().min(1) }),
     }),
   ]),
 );

@@ -28,6 +28,7 @@ import {
   BookOpenCheck,
   MessageCircleQuestionMark,
   CircleCheck,
+  Volume2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -145,6 +146,15 @@ export function LessonEditorToolbar({ editor }: { editor: Editor }) {
         }
       >
         <TableIcon />
+      </ToolbarButton>
+      <ToolbarButton
+        label="Insert pronunciation button"
+        onClick={() => {
+          const text = window.prompt("Word or phrase to pronounce:");
+          if (text) editor.chain().focus().setPronounce(text).run();
+        }}
+      >
+        <Volume2 />
       </ToolbarButton>
 
       <Separator orientation="vertical" className="mx-1 h-5" />

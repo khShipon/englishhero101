@@ -12,6 +12,12 @@ export const metadata: Metadata = {
   description: "Browse English vocabulary with Bangla meanings, definitions, and examples.",
 };
 
+// searchParams (search query, page number) drives the list directly
+// — same as app/(public)/[...slug]/page.tsx, opts out of the
+// static-prerender path rather than needing a Suspense boundary
+// around every section.
+export const instant = false;
+
 export default async function VocabularyIndexPage({
   searchParams,
 }: {

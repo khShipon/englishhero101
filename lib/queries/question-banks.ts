@@ -1,11 +1,17 @@
 import "server-only";
 import { cache } from "react";
+import { cacheLife, cacheTag } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { createPublicClient } from "@/lib/supabase/public";
 import type { QuestionType } from "@/lib/admin/question-validation";
+
+const QUESTION_SETS_TAG = "question-sets";
+const QUESTIONS_TAG = "questions";
 
 export type QuestionSet = {
   id: string;
   nodeId: string | null;
+  lessonId: string | null;
   title: string;
   description: string | null;
   examType: string | null;
@@ -45,6 +51,7 @@ export type Question = {
 type QuestionSetRow = {
   id: string;
   node_id: string | null;
+  lesson_id: string | null;
   title: string;
   description: string | null;
   exam_type: string | null;
@@ -81,12 +88,13 @@ type QuestionOptionRow = {
 };
 
 const QUESTION_SET_COLUMNS =
-  "id, node_id, title, description, exam_type, subject, year, board, difficulty, duration_minutes, marks, is_published, created_at, updated_at";
+  "id, node_id, lesson_id, title, description, exam_type, subject, year, board, difficulty, duration_minutes, marks, is_published, created_at, updated_at";
 
 function mapQuestionSet(row: QuestionSetRow): QuestionSet {
   return {
     id: row.id,
     nodeId: row.node_id,
+    lessonId: row.lesson_id,
     title: row.title,
     description: row.description,
     examType: row.exam_type,
@@ -116,23 +124,51 @@ export const getQuestionSets = cache(async (): Promise<QuestionSet[]> => {
 // --- Public-site queries (explicitly published-only; see the note in
 // lib/queries/lessons.ts about why this isn't left to RLS alone) ------
 
-export const getPublishedQuestionSetsByNode = cache(
-  async (nodeId: string): Promise<QuestionSet[]> => {
-    const supabase = await createClient();
-    const { data, error } = await supabase
-      .from("question_sets")
-      .select(QUESTION_SET_COLUMNS)
-      .eq("node_id", nodeId)
-      .eq("is_published", true)
-      .order("created_at", { ascending: false });
+export async function getPublishedQuestionSetsByNode(nodeId: string): Promise<QuestionSet[]> {
+  "use cache";
+  cacheLife("hours");
+  cacheTag(QUESTION_SETS_TAG);
 
-    if (error) throw error;
-    return (data ?? []).map(mapQuestionSet);
-  },
-);
+  const supabase = createPublicClient();
+  const { data, error } = await supabase
+    .from("question_sets")
+    .select(QUESTION_SET_COLUMNS)
+    .eq("node_id", nodeId)
+    .eq("is_published", true)
+    .order("created_at", { ascending: false });
 
-export const getRecentPublishedQuestionSets = cache(async (limit = 6): Promise<QuestionSet[]> => {
-  const supabase = await createClient();
+  if (error) throw error;
+  return (data ?? []).map(mapQuestionSet);
+}
+
+// This lesson's own dedicated practice exercise(s) — distinct from
+// getPublishedQuestionSetsByNode, which returns every question set
+// scoped to the shared topic node and so can't isolate one lesson's
+// exercise when several lessons share a node (as the spoken-course
+// levels do).
+export async function getPublishedQuestionSetsByLesson(lessonId: string): Promise<QuestionSet[]> {
+  "use cache";
+  cacheLife("hours");
+  cacheTag(QUESTION_SETS_TAG);
+
+  const supabase = createPublicClient();
+  const { data, error } = await supabase
+    .from("question_sets")
+    .select(QUESTION_SET_COLUMNS)
+    .eq("lesson_id", lessonId)
+    .eq("is_published", true)
+    .order("created_at", { ascending: true });
+
+  if (error) throw error;
+  return (data ?? []).map(mapQuestionSet);
+}
+
+export async function getRecentPublishedQuestionSets(limit = 6): Promise<QuestionSet[]> {
+  "use cache";
+  cacheLife("hours");
+  cacheTag(QUESTION_SETS_TAG);
+
+  const supabase = createPublicClient();
   const { data, error } = await supabase
     .from("question_sets")
     .select(QUESTION_SET_COLUMNS)
@@ -142,8 +178,11 @@ export const getRecentPublishedQuestionSets = cache(async (limit = 6): Promise<Q
 
   if (error) throw error;
   return (data ?? []).map(mapQuestionSet);
-});
+}
 
+// Admin-shared lookup (drafts included, relies on the caller's own RLS
+// access) — used by both the admin editor and, after an explicit
+// is_published check, by the public page's generateMetadata.
 export const getQuestionSetById = cache(async (id: string): Promise<QuestionSet | null> => {
   const supabase = await createClient();
   const { data, error } = await supabase
@@ -155,6 +194,26 @@ export const getQuestionSetById = cache(async (id: string): Promise<QuestionSet 
   if (error) throw error;
   return data ? mapQuestionSet(data) : null;
 });
+
+// Public-site version — anon-scoped and cacheable, for the public quiz
+// page itself (as opposed to its generateMetadata, which still needs
+// to work for an admin previewing an unpublished set's URL).
+export async function getPublishedQuestionSetById(id: string): Promise<QuestionSet | null> {
+  "use cache";
+  cacheLife("hours");
+  cacheTag(QUESTION_SETS_TAG);
+
+  const supabase = createPublicClient();
+  const { data, error } = await supabase
+    .from("question_sets")
+    .select(QUESTION_SET_COLUMNS)
+    .eq("id", id)
+    .eq("is_published", true)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data ? mapQuestionSet(data) : null;
+}
 
 export const getQuestionsBySet = cache(async (questionSetId: string): Promise<Question[]> => {
   const supabase = await createClient();
@@ -203,6 +262,137 @@ export const getQuestionsBySet = cache(async (questionSetId: string): Promise<Qu
     })),
   }));
 });
+
+// Public-site version of getQuestionsBySet — anon-scoped (RLS only
+// exposes rows for published sets), and filters question_options down
+// to this set's own questions instead of fetching every option row in
+// the table.
+async function getPublishedQuestionsBySet(questionSetId: string): Promise<Question[]> {
+  "use cache";
+  cacheLife("hours");
+  cacheTag(QUESTIONS_TAG);
+
+  const supabase = createPublicClient();
+  const { data: questions, error: questionsError } = await supabase
+    .from("questions")
+    .select(
+      "id, question_set_id, question_text, question_type, explanation, marks, difficulty, sort_order, correct_answer, metadata",
+    )
+    .eq("question_set_id", questionSetId)
+    .order("sort_order");
+
+  if (questionsError) throw questionsError;
+
+  const questionIds = ((questions ?? []) as QuestionRow[]).map((row) => row.id);
+  let options: QuestionOptionRow[] = [];
+  if (questionIds.length > 0) {
+    const { data, error: optionsError } = await supabase
+      .from("question_options")
+      .select("id, question_id, option_text, is_correct, sort_order")
+      .in("question_id", questionIds)
+      .order("sort_order");
+    if (optionsError) throw optionsError;
+    options = (data ?? []) as QuestionOptionRow[];
+  }
+
+  const optionsByQuestion = new Map<string, QuestionOptionRow[]>();
+  for (const option of (options ?? []) as QuestionOptionRow[]) {
+    const list = optionsByQuestion.get(option.question_id) ?? [];
+    list.push(option);
+    optionsByQuestion.set(option.question_id, list);
+  }
+
+  return ((questions ?? []) as QuestionRow[]).map((row) => ({
+    id: row.id,
+    questionSetId: row.question_set_id,
+    questionText: row.question_text,
+    questionType: row.question_type as QuestionType,
+    explanation: row.explanation,
+    marks: row.marks,
+    difficulty: row.difficulty,
+    sortOrder: row.sort_order,
+    correctAnswer: row.correct_answer,
+    metadata: row.metadata ?? {},
+    options: (optionsByQuestion.get(row.id) ?? []).map((option) => ({
+      id: option.id,
+      questionId: option.question_id,
+      optionText: option.option_text,
+      isCorrect: option.is_correct,
+      sortOrder: option.sort_order,
+    })),
+  }));
+}
+
+// --- Client-safe view (Phase 11 interactive quiz) -------------------
+// Everything below strips the answer key (is_correct, correct_answer,
+// metadata.pairs, and the sort_order that IS the answer for "ordering"
+// questions) before this data is ever allowed to reach a Client
+// Component's props. The grading Server Action re-fetches the full
+// Question server-side and never returns the raw key either — only
+// per-field "correct" values for review, after a submission exists.
+
+export type MatchingPair = { left: string; right: string };
+
+export function getMatchingPairs(question: Question): MatchingPair[] {
+  const pairs = (question.metadata as { pairs?: unknown } | null)?.pairs;
+  if (!Array.isArray(pairs)) return [];
+  return pairs.filter(
+    (pair): pair is MatchingPair =>
+      typeof pair === "object" &&
+      pair !== null &&
+      typeof (pair as Record<string, unknown>).left === "string" &&
+      typeof (pair as Record<string, unknown>).right === "string",
+  );
+}
+
+function shuffle<T>(items: T[]): T[] {
+  const result = [...items];
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result;
+}
+
+export type SanitizedOption = { id: string; optionText: string };
+
+export type SanitizedQuestion = {
+  id: string;
+  questionText: string;
+  questionType: QuestionType;
+  marks: number;
+  options: SanitizedOption[];
+  matchingLeft: string[];
+  matchingRight: string[];
+};
+
+export function sanitizeQuestion(question: Question): SanitizedQuestion {
+  const matchingPairs = getMatchingPairs(question);
+  return {
+    id: question.id,
+    questionText: question.questionText,
+    questionType: question.questionType,
+    marks: question.marks,
+    options: shuffle(question.options.map((option) => ({ id: option.id, optionText: option.optionText }))),
+    matchingLeft: matchingPairs.map((pair) => pair.left),
+    matchingRight: shuffle(matchingPairs.map((pair) => pair.right)),
+  };
+}
+
+// Cached as a whole, including the shuffle — Math.random() is only
+// allowed inside a "use cache" scope because the result gets cached
+// along with everything else, so the shuffled order is stable for a
+// cache window (see cacheLife("hours") above) rather than reshuffled
+// on literally every visit. That's an acceptable trade for not having
+// to carve this into its own request-time-only sliver.
+export async function getSanitizedQuestionsBySet(questionSetId: string): Promise<SanitizedQuestion[]> {
+  "use cache";
+  cacheLife("hours");
+  cacheTag(QUESTIONS_TAG);
+
+  const questions = await getPublishedQuestionsBySet(questionSetId);
+  return [...questions].sort((a, b) => a.sortOrder - b.sortOrder).map(sanitizeQuestion);
+}
 
 export const getQuestionById = cache(async (id: string): Promise<Question | null> => {
   const supabase = await createClient();

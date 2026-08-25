@@ -1,7 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/auth/dal";
 import { questionSchema, type StructuredData } from "@/lib/admin/question-validation";
@@ -11,6 +11,10 @@ import {
   MAX_QUESTIONS_CSV_ROWS,
   type QuestionCsvRowResult,
 } from "@/lib/admin/question-csv";
+
+// Matches the cacheTag() calls in lib/queries/question-banks.ts's
+// public-site functions.
+const QUESTIONS_TAG = "questions";
 
 export type QuestionFormState =
   | {
@@ -142,6 +146,7 @@ export async function createQuestion(
   await writeOptions(supabase, data.id, parsed.data.structuredData);
 
   revalidatePath(`/admin/question-banks/${questionSetId}`);
+  updateTag(QUESTIONS_TAG);
   redirect(`/admin/question-banks/${questionSetId}`);
 }
 
@@ -183,6 +188,7 @@ export async function updateQuestion(
   await writeOptions(supabase, id, parsed.data.structuredData);
 
   revalidatePath(`/admin/question-banks/${questionSetId}`);
+  updateTag(QUESTIONS_TAG);
   redirect(`/admin/question-banks/${questionSetId}`);
 }
 
@@ -285,6 +291,7 @@ export async function importQuestionsCsv(
   }
 
   revalidatePath(`/admin/question-banks/${questionSetId}`);
+  updateTag(QUESTIONS_TAG);
   redirect(`/admin/question-banks/${questionSetId}`);
 }
 
@@ -301,6 +308,7 @@ export async function deleteQuestion(formData: FormData) {
   }
 
   revalidatePath(`/admin/question-banks/${questionSetId}`);
+  updateTag(QUESTIONS_TAG);
 }
 
 export async function moveQuestion(formData: FormData) {
@@ -352,4 +360,5 @@ export async function moveQuestion(formData: FormData) {
   }
 
   revalidatePath(`/admin/question-banks/${questionSetId}`);
+  updateTag(QUESTIONS_TAG);
 }

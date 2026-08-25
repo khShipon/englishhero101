@@ -1,11 +1,14 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/auth/dal";
 import { vocabularySchema } from "@/lib/admin/vocabulary-validation";
 import { getNodeBySlugPath } from "@/lib/queries/content";
+
+// Matches the cacheTag() call in lib/queries/vocabulary.ts.
+const VOCABULARY_TAG = "vocabulary";
 import { parseCsv, MAX_CSV_SIZE_BYTES, type CsvImportState } from "@/lib/admin/csv-import";
 import {
   validateVocabularyCsvRow,
@@ -67,6 +70,7 @@ export async function createVocabulary(
   }
 
   revalidatePath("/admin/vocabulary");
+  updateTag(VOCABULARY_TAG);
   redirect("/admin/vocabulary");
 }
 
@@ -109,6 +113,7 @@ export async function updateVocabulary(
   }
 
   revalidatePath("/admin/vocabulary");
+  updateTag(VOCABULARY_TAG);
   redirect("/admin/vocabulary");
 }
 
@@ -193,6 +198,7 @@ export async function importVocabularyCsv(
   }
 
   revalidatePath("/admin/vocabulary");
+  updateTag(VOCABULARY_TAG);
   redirect("/admin/vocabulary");
 }
 
@@ -208,4 +214,5 @@ export async function deleteVocabulary(formData: FormData) {
   }
 
   revalidatePath("/admin/vocabulary");
+  updateTag(VOCABULARY_TAG);
 }

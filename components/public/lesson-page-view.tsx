@@ -1,16 +1,58 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import type { ContentNode, Breadcrumb } from "@/types/content";
 import type { Lesson } from "@/lib/queries/lessons";
 import { getAdjacentLessons, getRelatedLessons } from "@/lib/queries/lessons";
-import { getPublishedQuestionSetsByNode } from "@/lib/queries/question-banks";
+import {
+  getPublishedQuestionSetsByNode,
+  getPublishedQuestionSetsByLesson,
+  getSanitizedQuestionsBySet,
+} from "@/lib/queries/question-banks";
+import { getCurrentUser } from "@/lib/auth/dal";
+import { isLessonBookmarked } from "@/lib/queries/bookmarks";
+import { getLessonProgress } from "@/lib/queries/progress";
 import { BreadcrumbTrail } from "@/components/public/breadcrumb-trail";
 import { TableOfContents } from "@/components/public/table-of-contents";
 import { ShareButton } from "@/components/public/share-button";
+import { BookmarkButton } from "@/components/lessons/bookmark-button";
+import { MarkCompleteButton } from "@/components/lessons/mark-complete-button";
+import { TrackLessonView } from "@/components/lessons/track-lesson-view";
 import { LessonRenderer } from "@/components/lessons/lesson-renderer";
+import { PracticePanel } from "@/components/lessons/practice-panel";
 import { LessonCard } from "@/components/public/lesson-card";
 import { QuestionSetCard } from "@/components/public/question-set-card";
 import { extractHeadings } from "@/lib/lessons/extract-headings";
 import { ArrowLeft, ArrowRight } from "lucide-react";
+
+// Reads the session cookie — isolated so the lesson content around it
+// (cached via lib/queries/lessons.ts) can still be part of the static
+// shell instead of the whole page being forced dynamic.
+async function LessonUserActions({ lessonId }: { lessonId: string }) {
+  const user = await getCurrentUser();
+  if (!user) {
+    return (
+      <Link
+        href="/login"
+        className="text-sm text-muted-foreground underline underline-offset-2 hover:text-foreground"
+      >
+        Login to bookmark and track progress
+      </Link>
+    );
+  }
+
+  const [bookmarked, progress] = await Promise.all([
+    isLessonBookmarked(lessonId),
+    getLessonProgress(lessonId),
+  ]);
+
+  return (
+    <>
+      <BookmarkButton lessonId={lessonId} initialBookmarked={bookmarked} />
+      <MarkCompleteButton lessonId={lessonId} initialCompleted={progress?.completed ?? false} />
+      <TrackLessonView lessonId={lessonId} />
+    </>
+  );
+}
 
 export async function LessonPageView({
   lesson,
@@ -23,11 +65,19 @@ export async function LessonPageView({
   breadcrumbs: Breadcrumb[];
   basePath: string;
 }) {
-  const [{ previous, next }, related, questionSets] = await Promise.all([
+  const [{ previous, next }, related, questionSets, practiceSets] = await Promise.all([
     getAdjacentLessons(node.id, lesson.id),
     getRelatedLessons(node.id, lesson.id),
     getPublishedQuestionSetsByNode(node.id),
+    getPublishedQuestionSetsByLesson(lesson.id),
   ]);
+
+  const practicePanels = await Promise.all(
+    practiceSets.map(async (set) => ({
+      set,
+      questions: await getSanitizedQuestionsBySet(set.id),
+    })),
+  );
 
   const headings = extractHeadings(lesson.content);
 
@@ -39,11 +89,31 @@ export async function LessonPageView({
         {lesson.excerpt && <p className="mt-2 text-lg text-muted-foreground">{lesson.excerpt}</p>}
         <div className="mt-4 flex items-center gap-2">
           <ShareButton title={lesson.title} />
+          <Suspense fallback={null}>
+            <LessonUserActions lessonId={lesson.id} />
+          </Suspense>
         </div>
 
         <div className="mt-8">
           <LessonRenderer content={lesson.content} />
         </div>
+
+        {practicePanels.length > 0 && (
+          <section className="mt-10 flex flex-col gap-4">
+            <h2 className="text-lg font-semibold tracking-tight">Practice</h2>
+            {practicePanels.map(({ set, questions }) =>
+              questions.length > 0 ? (
+                <PracticePanel
+                  key={set.id}
+                  questionSetId={set.id}
+                  title={set.title}
+                  questionCount={questions.length}
+                  questions={questions}
+                />
+              ) : null,
+            )}
+          </section>
+        )}
 
         {(previous || next) && (
           <nav className="mt-12 grid grid-cols-1 gap-4 border-t pt-6 sm:grid-cols-2">

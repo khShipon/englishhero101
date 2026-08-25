@@ -1,8 +1,13 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { getQuestionSetById, getQuestionsBySet } from "@/lib/queries/question-banks";
+import { getPublishedQuestionSetById, getSanitizedQuestionsBySet } from "@/lib/queries/question-banks";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { QuestionSetQuiz } from "@/components/public/question-set-quiz";
+
+// `params` drives which question set to load directly — same as
+// app/(public)/[...slug]/page.tsx, opts out of the static-prerender
+// path rather than needing a Suspense boundary here.
+export const instant = false;
 
 export async function generateMetadata({
   params,
@@ -10,27 +15,23 @@ export async function generateMetadata({
   params: Promise<{ id: string }>;
 }): Promise<Metadata> {
   const { id } = await params;
-  const questionSet = await getQuestionSetById(id);
+  const questionSet = await getPublishedQuestionSetById(id);
   return { title: questionSet ? `${questionSet.title} — EnglishHero101` : "EnglishHero101" };
 }
 
-// Read-only preview of a question set. Interactive answering, scoring,
-// and progress tracking are student features (Phase 11) — this page
-// just lets a visitor see what's in a set before Phase 11 wires up
-// actually taking it.
 export default async function PublicQuestionSetPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const questionSet = await getQuestionSetById(id);
+  const questionSet = await getPublishedQuestionSetById(id);
 
   if (!questionSet || !questionSet.isPublished) {
     notFound();
   }
 
-  const questions = await getQuestionsBySet(id);
+  const questions = await getSanitizedQuestionsBySet(id);
 
   return (
     <div className="mx-auto w-full max-w-3xl px-4 py-10">
@@ -47,33 +48,13 @@ export default async function PublicQuestionSetPage({
         )}
       </div>
 
-      <div className="mt-8 flex flex-col gap-4">
-        {questions.map((question, index) => (
-          <Card key={question.id}>
-            <CardHeader>
-              <CardTitle className="text-base font-medium">
-                {index + 1}. {question.questionText}
-              </CardTitle>
-            </CardHeader>
-            {question.options.length > 0 && (
-              <CardContent>
-                <ul className="flex flex-col gap-1.5 text-sm text-muted-foreground">
-                  {question.options.map((option) => (
-                    <li key={option.id} className="flex items-center gap-2">
-                      <span className="flex size-4 shrink-0 items-center justify-center rounded-full border" />
-                      {option.optionText}
-                    </li>
-                  ))}
-                </ul>
-              </CardContent>
-            )}
-          </Card>
-        ))}
+      <div className="mt-8">
+        {questions.length > 0 ? (
+          <QuestionSetQuiz questionSetId={id} questions={questions} />
+        ) : (
+          <p className="text-center text-sm text-muted-foreground">This set has no questions yet.</p>
+        )}
       </div>
-
-      <p className="mt-8 text-center text-sm text-muted-foreground">
-        Interactive practice with scoring is coming soon.
-      </p>
     </div>
   );
 }

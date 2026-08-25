@@ -1,5 +1,6 @@
 import "server-only";
-import { createClient } from "@/lib/supabase/server";
+import { cacheLife, cacheTag } from "next/cache";
+import { createPublicClient } from "@/lib/supabase/public";
 import { mapNode, NODE_COLUMNS, type ContentNodeRow } from "@/lib/queries/content";
 import { mapLesson, LESSON_COLUMNS, type LessonRow } from "@/lib/queries/lessons";
 import { mapVocabulary, VOCABULARY_COLUMNS, type VocabularyRow } from "@/lib/queries/vocabulary";
@@ -21,12 +22,16 @@ const RESULT_LIMIT = 10;
 // injection, which isn't worth it here. Full-text ranking across
 // multiple columns is a Phase 10 (dedicated Search/SEO) concern.
 export async function searchSite(query: string): Promise<SearchResults> {
+  "use cache";
+  cacheLife("hours");
+  cacheTag("content-nodes", "lessons", "vocabulary");
+
   const trimmed = query.trim();
   if (!trimmed) {
     return { nodes: [], lessons: [], vocabulary: [] };
   }
 
-  const supabase = await createClient();
+  const supabase = createPublicClient();
   const pattern = `%${trimmed}%`;
 
   const [nodesRes, lessonsRes, vocabRes] = await Promise.all([

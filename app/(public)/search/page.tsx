@@ -9,6 +9,12 @@ import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/ca
 
 export const metadata: Metadata = { title: "Search — EnglishHero101" };
 
+// searchParams drives the query directly (no meaningful static shell
+// without it), so — same as app/(public)/[...slug]/page.tsx — this
+// opts out of the static-prerender path rather than needing a
+// Suspense boundary around every result section.
+export const instant = false;
+
 async function NodeResultCard({ node }: { node: Awaited<ReturnType<typeof searchSite>>["nodes"][number] }) {
   const breadcrumbs = await getBreadcrumbs(node.id);
   const href = `/${breadcrumbs.map((crumb) => crumb.slug).join("/")}`;

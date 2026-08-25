@@ -1,10 +1,14 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/auth/dal";
 import { questionSetSchema } from "@/lib/admin/question-validation";
+
+// Matches the cacheTag() calls in lib/queries/question-banks.ts's
+// public-site functions.
+const QUESTION_SETS_TAG = "question-sets";
 
 export type QuestionSetFormState =
   | {
@@ -73,6 +77,7 @@ export async function createQuestionSet(
   }
 
   revalidatePath("/admin/question-banks");
+  updateTag(QUESTION_SETS_TAG);
   redirect(`/admin/question-banks/${data.id}`);
 }
 
@@ -115,6 +120,7 @@ export async function updateQuestionSet(
   }
 
   revalidatePath("/admin/question-banks");
+  updateTag(QUESTION_SETS_TAG);
   revalidatePath(`/admin/question-banks/${id}`);
   redirect(`/admin/question-banks/${id}`);
 }
@@ -131,6 +137,7 @@ export async function deleteQuestionSet(formData: FormData) {
   }
 
   revalidatePath("/admin/question-banks");
+  updateTag(QUESTION_SETS_TAG);
 }
 
 export async function toggleQuestionSetPublish(formData: FormData) {
@@ -150,4 +157,5 @@ export async function toggleQuestionSetPublish(formData: FormData) {
   }
 
   revalidatePath("/admin/question-banks");
+  updateTag(QUESTION_SETS_TAG);
 }

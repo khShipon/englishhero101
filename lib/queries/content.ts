@@ -1,7 +1,11 @@
 import "server-only";
 import { cache } from "react";
+import { cacheLife, cacheTag } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { createPublicClient } from "@/lib/supabase/public";
 import type { Breadcrumb, ContentDescendant, ContentNode, ContentTreeNode } from "@/types/content";
+
+const CONTENT_TAG = "content-nodes";
 
 export type ContentNodeRow = {
   id: string;
@@ -133,8 +137,12 @@ export const getContentTree = cache(async (): Promise<ContentTreeNode[]> => {
 // Acceptable trade-off — publishing a child under an unpublished
 // parent is an unusual admin action, and the failure mode is just a
 // stray 404, not a content leak.
-export const getPublishedContentTree = cache(async (): Promise<ContentTreeNode[]> => {
-  const supabase = await createClient();
+export async function getPublishedContentTree(): Promise<ContentTreeNode[]> {
+  "use cache";
+  cacheLife("hours");
+  cacheTag(CONTENT_TAG);
+
+  const supabase = createPublicClient();
   const { data, error } = await supabase
     .from("content_nodes")
     .select(NODE_COLUMNS)
@@ -143,18 +151,25 @@ export const getPublishedContentTree = cache(async (): Promise<ContentTreeNode[]
 
   if (error) throw error;
   return buildContentTree((data ?? []).map(mapNode));
-});
+}
 
-// Direct children of a node, or top-level categories when parentId is null.
-export const getChildren = cache(async (parentId: string | null): Promise<ContentNode[]> => {
-  const supabase = await createClient();
-  const base = supabase.from("content_nodes").select(NODE_COLUMNS);
+// Direct children of a node, or top-level categories when parentId is
+// null. Public-site only (nav, category pages) — explicitly filtered
+// rather than left to RLS, same reasoning as the lessons/question-banks
+// "public-site queries" sections.
+export async function getChildren(parentId: string | null): Promise<ContentNode[]> {
+  "use cache";
+  cacheLife("hours");
+  cacheTag(CONTENT_TAG);
+
+  const supabase = createPublicClient();
+  const base = supabase.from("content_nodes").select(NODE_COLUMNS).eq("is_published", true);
   const scoped = parentId === null ? base.is("parent_id", null) : base.eq("parent_id", parentId);
 
   const { data, error } = await scoped.order("sort_order");
   if (error) throw error;
   return (data ?? []).map(mapNode);
-});
+}
 
 export const getNodeById = cache(async (id: string): Promise<ContentNode | null> => {
   const supabase = await createClient();
@@ -194,14 +209,49 @@ export const getNodeBySlugPath = cache(async (slugPath: string[]): Promise<Conte
   return node;
 });
 
+// Public-site version of the above, for the [...slug] route — an
+// anon-scoped client so a logged-in admin/editor browsing the public
+// site can't walk through a draft node they'd otherwise see via RLS.
+export async function getPublishedNodeBySlugPath(slugPath: string[]): Promise<ContentNode | null> {
+  "use cache";
+  cacheLife("hours");
+  cacheTag(CONTENT_TAG);
+
+  if (slugPath.length === 0) return null;
+
+  const supabase = createPublicClient();
+  let parentId: string | null = null;
+  let node: ContentNode | null = null;
+
+  for (const slug of slugPath) {
+    const base = supabase.from("content_nodes").select(NODE_COLUMNS).eq("slug", slug);
+    const scoped = parentId === null ? base.is("parent_id", null) : base.eq("parent_id", parentId);
+
+    const { data, error } = await scoped.maybeSingle();
+    if (error) throw error;
+    if (!data) return null;
+
+    node = mapNode(data);
+    parentId = node.id;
+  }
+
+  return node;
+}
+
 // Root-to-node breadcrumb trail via the get_node_breadcrumbs() DB
 // function — one round trip instead of N sequential parent lookups.
-export const getBreadcrumbs = cache(async (nodeId: string): Promise<Breadcrumb[]> => {
-  const supabase = await createClient();
+// Breadcrumb titles/slugs are public information regardless of who's
+// asking, so this always uses the anon-scoped client.
+export async function getBreadcrumbs(nodeId: string): Promise<Breadcrumb[]> {
+  "use cache";
+  cacheLife("hours");
+  cacheTag(CONTENT_TAG);
+
+  const supabase = createPublicClient();
   const { data, error } = await supabase.rpc("get_node_breadcrumbs", { target_id: nodeId });
   if (error) throw error;
   return (data ?? []).map(mapBreadcrumb);
-});
+}
 
 // Every descendant of a node, at any depth, via the
 // get_node_descendants() DB function.

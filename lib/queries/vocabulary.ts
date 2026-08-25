@@ -1,6 +1,8 @@
 import "server-only";
-import { cache } from "react";
-import { createClient } from "@/lib/supabase/server";
+import { cacheLife, cacheTag } from "next/cache";
+import { createPublicClient } from "@/lib/supabase/public";
+
+const VOCABULARY_TAG = "vocabulary";
 
 export type VocabularyEntry = {
   id: string;
@@ -60,41 +62,47 @@ export function mapVocabulary(row: VocabularyRow): VocabularyEntry {
 
 const PAGE_SIZE = 20;
 
-export const getVocabularyList = cache(
-  async (
-    search: string,
-    page: number,
-  ): Promise<{ items: VocabularyEntry[]; totalCount: number; pageSize: number }> => {
-    const supabase = await createClient();
-    const from = (page - 1) * PAGE_SIZE;
-    const to = from + PAGE_SIZE - 1;
+// Read access is identical for anon and authenticated (no draft/publish
+// state on vocabulary — see the "vocabulary_select_all" RLS policy), so
+// this is safe to cache for both the public and admin list pages.
+export async function getVocabularyList(
+  search: string,
+  page: number,
+): Promise<{ items: VocabularyEntry[]; totalCount: number; pageSize: number }> {
+  "use cache";
+  cacheLife("hours");
+  cacheTag(VOCABULARY_TAG);
 
-    let query = supabase
-      .from("vocabulary")
-      .select(VOCABULARY_COLUMNS, { count: "exact" })
-      .order("word");
+  const supabase = createPublicClient();
+  const from = (page - 1) * PAGE_SIZE;
+  const to = from + PAGE_SIZE - 1;
 
-    if (search.trim()) {
-      // Single-column ilike, not .or(...) — that method needs the
-      // caller to hand-escape commas/parens in the search string to
-      // stay safe from PostgREST filter injection, which isn't worth
-      // the risk for a CMS search box.
-      query = query.ilike("word", `%${search.trim()}%`);
-    }
+  let query = supabase.from("vocabulary").select(VOCABULARY_COLUMNS, { count: "exact" }).order("word");
 
-    const { data, error, count } = await query.range(from, to);
-    if (error) throw error;
+  if (search.trim()) {
+    // Single-column ilike, not .or(...) — that method needs the
+    // caller to hand-escape commas/parens in the search string to
+    // stay safe from PostgREST filter injection, which isn't worth
+    // the risk for a CMS search box.
+    query = query.ilike("word", `%${search.trim()}%`);
+  }
 
-    return {
-      items: (data ?? []).map(mapVocabulary),
-      totalCount: count ?? 0,
-      pageSize: PAGE_SIZE,
-    };
-  },
-);
+  const { data, error, count } = await query.range(from, to);
+  if (error) throw error;
 
-export const getVocabularyById = cache(async (id: string): Promise<VocabularyEntry | null> => {
-  const supabase = await createClient();
+  return {
+    items: (data ?? []).map(mapVocabulary),
+    totalCount: count ?? 0,
+    pageSize: PAGE_SIZE,
+  };
+}
+
+export async function getVocabularyById(id: string): Promise<VocabularyEntry | null> {
+  "use cache";
+  cacheLife("hours");
+  cacheTag(VOCABULARY_TAG);
+
+  const supabase = createPublicClient();
   const { data, error } = await supabase
     .from("vocabulary")
     .select(VOCABULARY_COLUMNS)
@@ -103,13 +111,17 @@ export const getVocabularyById = cache(async (id: string): Promise<VocabularyEnt
 
   if (error) throw error;
   return data ? mapVocabulary(data) : null;
-});
+}
 
 // Vocabulary has no popularity/usage tracking yet, so "popular" is
 // approximated with a recent selection — a reasonable stand-in until
 // there's real usage data to rank by.
-export const getRecentVocabulary = cache(async (limit = 8): Promise<VocabularyEntry[]> => {
-  const supabase = await createClient();
+export async function getRecentVocabulary(limit = 8): Promise<VocabularyEntry[]> {
+  "use cache";
+  cacheLife("hours");
+  cacheTag(VOCABULARY_TAG);
+
+  const supabase = createPublicClient();
   const { data, error } = await supabase
     .from("vocabulary")
     .select(VOCABULARY_COLUMNS)
@@ -118,4 +130,4 @@ export const getRecentVocabulary = cache(async (limit = 8): Promise<VocabularyEn
 
   if (error) throw error;
   return (data ?? []).map(mapVocabulary);
-});
+}

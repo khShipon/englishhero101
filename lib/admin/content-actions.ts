@@ -1,11 +1,16 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/auth/dal";
 import { getDescendants, isSlugTaken } from "@/lib/queries/content";
 import { contentNodeSchema } from "@/lib/admin/validation";
+
+// Matches the cacheTag() calls in lib/queries/content.ts's public-site
+// functions — busts the public site's cached category tree/nav/pages
+// immediately on any change here (see "use cache" + updateTag docs).
+const CONTENT_TAG = "content-nodes";
 
 export type ContentFormState =
   | {
@@ -91,6 +96,7 @@ export async function createContentNode(
   }
 
   revalidatePath("/admin/content");
+  updateTag(CONTENT_TAG);
   redirect("/admin/content");
 }
 
@@ -156,6 +162,7 @@ export async function updateContentNode(
   }
 
   revalidatePath("/admin/content");
+  updateTag(CONTENT_TAG);
   redirect("/admin/content");
 }
 
@@ -171,6 +178,7 @@ export async function deleteContentNode(formData: FormData) {
   }
 
   revalidatePath("/admin/content");
+  updateTag(CONTENT_TAG);
 }
 
 export async function togglePublish(formData: FormData) {
@@ -193,6 +201,7 @@ export async function togglePublish(formData: FormData) {
   }
 
   revalidatePath("/admin/content");
+  updateTag(CONTENT_TAG);
 }
 
 // Duplicates only the node itself (title/description/metadata), not
@@ -248,6 +257,7 @@ export async function duplicateContentNode(formData: FormData) {
   }
 
   revalidatePath("/admin/content");
+  updateTag(CONTENT_TAG);
 }
 
 export async function moveNode(formData: FormData) {
@@ -295,4 +305,5 @@ export async function moveNode(formData: FormData) {
   }
 
   revalidatePath("/admin/content");
+  updateTag(CONTENT_TAG);
 }
