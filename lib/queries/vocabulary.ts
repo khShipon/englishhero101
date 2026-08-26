@@ -113,6 +113,26 @@ export async function getVocabularyById(id: string): Promise<VocabularyEntry | n
   return data ? mapVocabulary(data) : null;
 }
 
+// Vocabulary scoped to one content node (e.g. an IELTS vocabulary
+// category like "Education") -- used by CategoryPageView so a node's
+// own word list shows on its page, in addition to the site-wide
+// /vocabulary listing (which is unscoped and shows every word).
+export async function getVocabularyByNode(nodeId: string): Promise<VocabularyEntry[]> {
+  "use cache";
+  cacheLife("hours");
+  cacheTag(VOCABULARY_TAG);
+
+  const supabase = createPublicClient();
+  const { data, error } = await supabase
+    .from("vocabulary")
+    .select(VOCABULARY_COLUMNS)
+    .eq("node_id", nodeId)
+    .order("word");
+
+  if (error) throw error;
+  return (data ?? []).map(mapVocabulary);
+}
+
 // Vocabulary has no popularity/usage tracking yet, so "popular" is
 // approximated with a recent selection — a reasonable stand-in until
 // there's real usage data to rank by.

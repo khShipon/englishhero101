@@ -2,10 +2,12 @@ import type { ContentNode, Breadcrumb } from "@/types/content";
 import { getChildren } from "@/lib/queries/content";
 import { getPublishedLessonsByNode } from "@/lib/queries/lessons";
 import { getPublishedQuestionSetsByNode } from "@/lib/queries/question-banks";
+import { getVocabularyByNode } from "@/lib/queries/vocabulary";
 import { BreadcrumbTrail } from "@/components/public/breadcrumb-trail";
 import { CategoryCard } from "@/components/public/category-card";
 import { LessonCard } from "@/components/public/lesson-card";
 import { QuestionSetCard } from "@/components/public/question-set-card";
+import { VocabularyCard } from "@/components/public/vocabulary-card";
 
 // One reusable template for every category/section/topic page — IELTS,
 // Grammar, SSC, HSC, Spoken English, and any future category an admin
@@ -19,10 +21,11 @@ export async function CategoryPageView({
   breadcrumbs: Breadcrumb[];
   basePath: string;
 }) {
-  const [children, lessons, questionSets] = await Promise.all([
+  const [children, lessons, questionSets, vocabulary] = await Promise.all([
     getChildren(node.id),
     getPublishedLessonsByNode(node.id),
     getPublishedQuestionSetsByNode(node.id),
+    getVocabularyByNode(node.id),
   ]);
 
   const publishedChildren = children.filter((child) => child.isPublished);
@@ -68,7 +71,21 @@ export async function CategoryPageView({
         </section>
       )}
 
-      {publishedChildren.length === 0 && lessons.length === 0 && questionSets.length === 0 && (
+      {vocabulary.length > 0 && (
+        <section className="mt-10">
+          <h2 className="mb-4 text-lg font-semibold tracking-tight">Vocabulary</h2>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {vocabulary.map((entry) => (
+              <VocabularyCard key={entry.id} entry={entry} />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {publishedChildren.length === 0 &&
+        lessons.length === 0 &&
+        questionSets.length === 0 &&
+        vocabulary.length === 0 && (
         <p className="mt-10 text-sm text-muted-foreground">
           Nothing published here yet — check back soon.
         </p>
