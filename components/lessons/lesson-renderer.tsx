@@ -85,7 +85,7 @@ function renderNode(node: LessonNode, key: React.Key, assignId: AssignId): React
         </div>
       );
     case "pronounce":
-      return <PronounceButton key={key} text={node.attrs.text} />;
+      return <PronounceButton key={key} text={node.attrs.text} label={node.attrs.label} />;
     default:
       return null;
   }

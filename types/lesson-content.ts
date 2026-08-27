@@ -41,7 +41,7 @@ export type LessonNode =
   | { type: "tableHeader"; content?: LessonNode[] }
   | { type: "hardBreak" }
   | { type: "callout"; attrs: { variant: CalloutVariant }; content?: LessonNode[] }
-  | { type: "pronounce"; attrs: { text: string } };
+  | { type: "pronounce"; attrs: { text: string; label?: string } };
 
 // Whitelist-based, recursive: only node/mark types the editor and
 // renderer both know about survive validation. This is what makes
@@ -74,7 +74,7 @@ const lessonNodeSchema: z.ZodType<LessonNode> = z.lazy(() =>
     }),
     z.object({
       type: z.literal("pronounce"),
-      attrs: z.object({ text: z.string().min(1) }),
+      attrs: z.object({ text: z.string().min(1), label: z.string().optional() }),
     }),
   ]),
 );
