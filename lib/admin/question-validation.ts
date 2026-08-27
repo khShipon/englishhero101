@@ -96,6 +96,13 @@ export const questionSchema = z.object({
     .enum(["none", "beginner", "intermediate", "advanced"])
     .transform((value) => (value === "none" ? null : value)),
   correctAnswer: optionalText(500),
+  // Which reading passage (by number) this question belongs to — only
+  // meaningful for questions in a lesson-linked reading-test set; "none"
+  // or blank means unlinked.
+  passageNumber: z
+    .string()
+    .transform((value) => (value.trim() === "" || value === "none" ? null : Number(value)))
+    .pipe(z.number().int().min(1).max(20).nullable()),
   structuredData: z
     .string()
     .transform((value, ctx) => {

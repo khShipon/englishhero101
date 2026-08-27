@@ -7,7 +7,7 @@ import { QuestionSetQuiz } from "@/components/public/question-set-quiz";
 import { ReadingTestMode } from "@/components/public/reading-test-mode";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Dumbbell, Clock3 } from "lucide-react";
+import { Dumbbell, Clock3, BookOpen } from "lucide-react";
 
 // Gates the (already-fetched) practice quiz behind a "Start Practice"
 // CTA, so a lesson always reads as "teach, then practice" rather than
@@ -28,10 +28,10 @@ export function PracticePanel({
   questions: SanitizedQuestion[];
   passages?: ReadingPassage[];
 }) {
-  const [started, setStarted] = useState(false);
+  const [mode, setMode] = useState<"idle" | "test" | "read">("idle");
   const isTestMode = !!passages && passages.length > 0;
 
-  if (!started) {
+  if (mode === "idle") {
     return (
       <Card>
         <CardHeader>
@@ -44,10 +44,15 @@ export function PracticePanel({
               : `${questionCount} question${questionCount === 1 ? "" : "s"} — check what you just learned.`}
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <Button type="button" onClick={() => setStarted(true)}>
+        <CardContent className="flex flex-wrap gap-2">
+          <Button type="button" onClick={() => setMode("test")}>
             {isTestMode ? "Begin test" : "Start practice"}
           </Button>
+          {isTestMode && (
+            <Button type="button" variant="outline" onClick={() => setMode("read")}>
+              <BookOpen /> Read only (no timer)
+            </Button>
+          )}
         </CardContent>
       </Card>
     );
@@ -55,7 +60,13 @@ export function PracticePanel({
 
   if (isTestMode) {
     return (
-      <ReadingTestMode questionSetId={questionSetId} title={title} passages={passages!} questions={questions} />
+      <ReadingTestMode
+        questionSetId={questionSetId}
+        title={title}
+        passages={passages!}
+        questions={questions}
+        readOnly={mode === "read"}
+      />
     );
   }
 

@@ -3,6 +3,7 @@ import { cache } from "react";
 import { cacheLife, cacheTag } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createPublicClient } from "@/lib/supabase/public";
+import { getDescendants } from "@/lib/queries/content";
 import type { LessonContent } from "@/types/lesson-content";
 
 const LESSONS_TAG = "lessons";
@@ -74,6 +75,25 @@ export const getLessonsByNode = cache(async (nodeId: string): Promise<Lesson[]> 
     .from("lessons")
     .select(LESSON_COLUMNS)
     .eq("node_id", nodeId)
+    .order("created_at", { ascending: false });
+
+  if (error) throw error;
+  return (data ?? []).map(mapLesson);
+});
+
+// Every lesson under a node's whole subtree, not just its direct
+// children — for sections like IELTS Speaking/Writing/Listening where
+// lessons attach to nested topic nodes rather than the section node
+// itself, so getLessonsByNode alone would report "no lessons" even
+// when the section has plenty.
+export const getLessonsBySubtree = cache(async (nodeId: string): Promise<Lesson[]> => {
+  const supabase = await createClient();
+  const descendants = await getDescendants(nodeId);
+  const nodeIds = [nodeId, ...descendants.map((d) => d.id)];
+  const { data, error } = await supabase
+    .from("lessons")
+    .select(LESSON_COLUMNS)
+    .in("node_id", nodeIds)
     .order("created_at", { ascending: false });
 
   if (error) throw error;

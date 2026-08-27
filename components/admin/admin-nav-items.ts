@@ -5,10 +5,18 @@ import {
   BookOpen,
   Users,
   Settings,
+  GraduationCap,
 } from "lucide-react";
 
 export const ADMIN_NAV_ITEMS = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true, adminOnly: false },
+  {
+    href: "/admin/ielts",
+    label: "IELTS",
+    icon: GraduationCap,
+    exact: false,
+    adminOnly: false,
+  },
   { href: "/admin/content", label: "Content", icon: FolderTree, exact: false, adminOnly: false },
   {
     href: "/admin/question-banks",

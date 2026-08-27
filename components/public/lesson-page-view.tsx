@@ -23,6 +23,7 @@ import { PracticePanel } from "@/components/lessons/practice-panel";
 import { LessonCard } from "@/components/public/lesson-card";
 import { QuestionSetCard } from "@/components/public/question-set-card";
 import { extractHeadings } from "@/lib/lessons/extract-headings";
+import { cn } from "@/lib/utils";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 
 // Reads the session cookie — isolated so the lesson content around it
@@ -81,10 +82,41 @@ export async function LessonPageView({
     })),
   );
 
-  const headings = extractHeadings(lesson.content);
+  const isReadingTest = readingPassages.length > 0;
+  // Reading tests carry their passages/questions only in the interactive
+  // split-screen test below — the lesson body would otherwise repeat
+  // the exact same passages and questions as plain static text. Their
+  // headings (and the TOC that would link to them) are skipped for the
+  // same reason.
+  const headings = isReadingTest ? [] : extractHeadings(lesson.content);
+
+  const practiceSection = practicePanels.length > 0 && (
+    <section className="mt-10 flex flex-col gap-4">
+      <h2 className="text-lg font-semibold tracking-tight">Practice</h2>
+      {practicePanels.map(({ set, questions }) =>
+        questions.length > 0 ? (
+          <PracticePanel
+            key={set.id}
+            questionSetId={set.id}
+            title={set.title}
+            questionCount={questions.length}
+            questions={questions}
+            passages={readingPassages}
+          />
+        ) : null,
+      )}
+    </section>
+  );
 
   return (
-    <article className="mx-auto grid w-full max-w-6xl grid-cols-1 gap-10 px-4 py-10 lg:grid-cols-[1fr_260px]">
+    <article
+      className={cn(
+        "mx-auto grid w-full gap-10 px-4 py-10",
+        isReadingTest
+          ? "max-w-[1600px] grid-cols-1"
+          : "max-w-6xl grid-cols-1 lg:grid-cols-[1fr_260px]",
+      )}
+    >
       <div className="min-w-0">
         <BreadcrumbTrail breadcrumbs={breadcrumbs} currentTitle={lesson.title} />
         <h1 className="mt-3 text-3xl font-semibold tracking-tight text-balance">{lesson.title}</h1>
@@ -96,26 +128,15 @@ export async function LessonPageView({
           </Suspense>
         </div>
 
-        <div className="mt-8">
-          <LessonRenderer content={lesson.content} />
-        </div>
-
-        {practicePanels.length > 0 && (
-          <section className="mt-10 flex flex-col gap-4">
-            <h2 className="text-lg font-semibold tracking-tight">Practice</h2>
-            {practicePanels.map(({ set, questions }) =>
-              questions.length > 0 ? (
-                <PracticePanel
-                  key={set.id}
-                  questionSetId={set.id}
-                  title={set.title}
-                  questionCount={questions.length}
-                  questions={questions}
-                  passages={readingPassages}
-                />
-              ) : null,
-            )}
-          </section>
+        {isReadingTest ? (
+          <div className="mt-10">{practiceSection}</div>
+        ) : (
+          <>
+            <div className="mt-8">
+              <LessonRenderer content={lesson.content} />
+            </div>
+            {practiceSection}
+          </>
         )}
 
         {(previous || next) && (
@@ -172,11 +193,13 @@ export async function LessonPageView({
         )}
       </div>
 
-      <aside className="hidden lg:block">
-        <div className="sticky top-20">
-          <TableOfContents headings={headings} />
-        </div>
-      </aside>
+      {!isReadingTest && (
+        <aside className="hidden lg:block">
+          <div className="sticky top-20">
+            <TableOfContents headings={headings} />
+          </div>
+        </aside>
+      )}
     </article>
   );
 }

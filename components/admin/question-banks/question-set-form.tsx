@@ -32,7 +32,7 @@ export function QuestionSetForm({
   const [state, formAction, pending] = useActionState<QuestionSetFormState, FormData>(action, undefined);
 
   return (
-    <Card className="max-w-2xl">
+    <Card className="max-w-3xl">
       <CardHeader>
         <CardTitle>{mode === "create" ? "New question set" : "Edit question set"}</CardTitle>
       </CardHeader>

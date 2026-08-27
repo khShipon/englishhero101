@@ -140,6 +140,37 @@ export async function deleteQuestionSet(formData: FormData) {
   updateTag(QUESTION_SETS_TAG);
 }
 
+// Creates the lesson's own dedicated practice question set — the same
+// lesson-scoped mechanism getPublishedQuestionSetsByLesson reads on the
+// public site. Kept as a plain form action (not useActionState) since
+// it takes no free-text input: it's a single "make me one of these"
+// button on the lesson edit page's reading-passages panel.
+export async function createLessonQuestionSet(formData: FormData) {
+  await requireRole(["admin", "editor"]);
+  const lessonId = String(formData.get("lessonId") ?? "");
+  const lessonTitle = String(formData.get("lessonTitle") ?? "");
+  if (!lessonId) return;
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("question_sets")
+    .insert({
+      lesson_id: lessonId,
+      title: `Practice: ${lessonTitle}`,
+      is_published: false,
+    })
+    .select("id")
+    .single();
+
+  if (error || !data) {
+    throw new Error("Could not create a practice set for this lesson.");
+  }
+
+  revalidatePath(`/admin/lessons/${lessonId}/edit`);
+  updateTag(QUESTION_SETS_TAG);
+  redirect(`/admin/question-banks/${data.id}`);
+}
+
 export async function toggleQuestionSetPublish(formData: FormData) {
   await requireRole(["admin", "editor"]);
   const id = String(formData.get("id") ?? "");

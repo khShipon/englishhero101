@@ -4,6 +4,7 @@ import { getContentTree } from "@/lib/queries/content";
 import { getLessonById } from "@/lib/queries/lessons";
 import { flattenParentOptions } from "@/lib/admin/parent-options";
 import { LessonForm } from "@/components/admin/lesson-editor/lesson-form";
+import { ReadingPassagesPanel } from "@/components/admin/reading-passages/reading-passages-panel";
 
 export const metadata: Metadata = { title: "Edit lesson — Admin — EnglishHero101" };
 
@@ -22,6 +23,9 @@ export default async function EditLessonPage({
   const parentOptions = flattenParentOptions(tree);
 
   return (
-    <LessonForm mode="edit" lessonId={lesson.id} parentOptions={parentOptions} defaultValues={lesson} />
+    <div className="flex flex-col gap-6">
+      <LessonForm mode="edit" lessonId={lesson.id} parentOptions={parentOptions} defaultValues={lesson} />
+      <ReadingPassagesPanel lessonId={lesson.id} lessonTitle={lesson.title} />
+    </div>
   );
 }

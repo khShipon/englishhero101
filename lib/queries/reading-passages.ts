@@ -1,5 +1,7 @@
 import "server-only";
+import { cache } from "react";
 import { cacheLife, cacheTag } from "next/cache";
+import { createClient } from "@/lib/supabase/server";
 import { createPublicClient } from "@/lib/supabase/public";
 
 const READING_PASSAGES_TAG = "reading-passages";
@@ -51,3 +53,21 @@ export async function getReadingPassagesByLesson(lessonId: string): Promise<Read
   if (error) throw error;
   return (data ?? []).map(mapReadingPassage);
 }
+
+// Admin-scoped lookup (drafts included, relies on the caller's own RLS
+// access) — mirrors getQuestionSetById vs. its public-only counterpart,
+// since an admin needs to see/edit a reading-test lesson's passages
+// before it's published.
+export const getReadingPassagesByLessonAdmin = cache(
+  async (lessonId: string): Promise<ReadingPassage[]> => {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from("reading_passages")
+      .select("id, lesson_id, passage_number, title, paragraphs")
+      .eq("lesson_id", lessonId)
+      .order("passage_number");
+
+    if (error) throw error;
+    return (data ?? []).map(mapReadingPassage);
+  },
+);

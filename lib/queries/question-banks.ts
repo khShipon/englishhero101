@@ -183,6 +183,23 @@ export async function getRecentPublishedQuestionSets(limit = 6): Promise<Questio
 // Admin-shared lookup (drafts included, relies on the caller's own RLS
 // access) — used by both the admin editor and, after an explicit
 // is_published check, by the public page's generateMetadata.
+// Admin-scoped lookup of a lesson's own linked question set(s) (drafts
+// included) — used by the reading-passages admin panel to show
+// "manage practice set" instead of "create practice set" once one
+// exists, mirroring the lessonId scoping on the public-site
+// getPublishedQuestionSetsByLesson above.
+export const getQuestionSetsByLesson = cache(async (lessonId: string): Promise<QuestionSet[]> => {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("question_sets")
+    .select(QUESTION_SET_COLUMNS)
+    .eq("lesson_id", lessonId)
+    .order("created_at", { ascending: true });
+
+  if (error) throw error;
+  return (data ?? []).map(mapQuestionSet);
+});
+
 export const getQuestionSetById = cache(async (id: string): Promise<QuestionSet | null> => {
   const supabase = await createClient();
   const { data, error } = await supabase

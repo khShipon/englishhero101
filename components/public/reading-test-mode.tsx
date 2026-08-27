@@ -45,11 +45,13 @@ export function ReadingTestMode({
   title,
   passages,
   questions,
+  readOnly = false,
 }: {
   questionSetId: string;
   title: string;
   passages: ReadingPassage[];
   questions: SanitizedQuestion[];
+  readOnly?: boolean;
 }) {
   const [activePassage, setActivePassage] = useState(passages[0]?.passageNumber ?? 1);
   const [answers, setAnswers] = useState<Record<string, AnswerState>>({});
@@ -60,12 +62,12 @@ export function ReadingTestMode({
   const questionRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   useEffect(() => {
-    if (result) return;
+    if (result || readOnly) return;
     const interval = setInterval(() => {
       setSecondsLeft((prev) => (prev > 0 ? prev - 1 : 0));
     }, 1000);
     return () => clearInterval(interval);
-  }, [result]);
+  }, [result, readOnly]);
 
   const resultByQuestionId = useMemo(() => {
     if (!result) return null;
@@ -137,15 +139,21 @@ export function ReadingTestMode({
           <span className="text-sm font-semibold">{title}</span>
         </div>
         <div className="flex items-center gap-4">
-          <div
-            className={cn(
-              "flex items-center gap-1.5 rounded-md border px-2.5 py-1 font-mono text-sm",
-              secondsLeft === 0 && !result && "border-destructive text-destructive",
-            )}
-          >
-            <Clock className="size-3.5" />
-            {secondsLeft === 0 && !result ? "Time's up" : formatTime(secondsLeft)}
-          </div>
+          {readOnly ? (
+            <span className="rounded-md border px-2.5 py-1 text-sm text-muted-foreground">
+              Read-only — no timer, answers aren&apos;t recorded
+            </span>
+          ) : (
+            <div
+              className={cn(
+                "flex items-center gap-1.5 rounded-md border px-2.5 py-1 font-mono text-sm",
+                secondsLeft === 0 && !result && "border-destructive text-destructive",
+              )}
+            >
+              <Clock className="size-3.5" />
+              {secondsLeft === 0 && !result ? "Time's up" : formatTime(secondsLeft)}
+            </div>
+          )}
         </div>
       </div>
       <div className="flex gap-1 border-b bg-muted/10 px-4 pt-2">
@@ -168,11 +176,11 @@ export function ReadingTestMode({
 
       {/* Split screen: passage left, questions right */}
       <div className="grid grid-cols-1 md:grid-cols-2">
-        <div className="max-h-[70vh] overflow-y-auto border-b p-5 md:border-b-0 md:border-r">
+        <div className="h-[calc(100vh-230px)] min-h-[420px] overflow-y-auto border-b p-5 md:border-b-0 md:border-r">
           <h3 className="mb-3 font-semibold">
             Passage {activePassageData?.passageNumber}: {activePassageData?.title}
           </h3>
-          <div className="prose prose-sm prose-neutral max-w-none dark:prose-invert">
+          <div className="prose prose-neutral max-w-none dark:prose-invert">
             {activePassageData?.paragraphs.map((para, i) => (
               <p key={i}>
                 {para.label && <strong>{para.label}. </strong>}
@@ -182,7 +190,7 @@ export function ReadingTestMode({
           </div>
         </div>
 
-        <div className="max-h-[70vh] overflow-y-auto p-5">
+        <div className="h-[calc(100vh-230px)] min-h-[420px] overflow-y-auto p-5">
           <div className="flex flex-col gap-4">
             {activeQuestions.map((question) => {
               const graded = resultByQuestionId?.get(question.id) ?? null;
@@ -210,7 +218,7 @@ export function ReadingTestMode({
                       question={question}
                       multiple={question.questionType === "multiple_answer"}
                       value={answers[question.id]?.selectedOptionIds ?? []}
-                      disabled={!!result}
+                      disabled={!!result || readOnly}
                       onChange={(selectedOptionIds) => updateAnswer(question.id, { selectedOptionIds })}
                       correctOptionIds={graded?.correctOptionIds ?? null}
                     />
@@ -220,7 +228,7 @@ export function ReadingTestMode({
                     <div className="flex flex-col gap-2">
                       <Input
                         value={answers[question.id]?.text ?? ""}
-                        disabled={!!result}
+                        disabled={!!result || readOnly}
                         onChange={(e) => updateAnswer(question.id, { text: e.target.value })}
                         placeholder="Type your answer"
                       />
@@ -237,7 +245,7 @@ export function ReadingTestMode({
                     <MatchingInput
                       question={question}
                       value={answers[question.id]?.matchingAnswer ?? {}}
-                      disabled={!!result}
+                      disabled={!!result || readOnly}
                       onChange={(matchingAnswer) => updateAnswer(question.id, { matchingAnswer })}
                       graded={graded}
                     />
@@ -281,22 +289,28 @@ export function ReadingTestMode({
           })}
         </div>
         <div className="flex items-center gap-3">
-          {!result && (
-            <span className="text-xs text-muted-foreground">
-              {answeredCount} / {questions.reduce((s, q) => s + q.marks, 0)} answered
-            </span>
-          )}
-          {error && <p className="text-sm text-destructive">{error}</p>}
-          {!result ? (
-            <Button type="button" onClick={handleSubmit} disabled={pending}>
-              {pending ? "Submitting..." : "Submit test"}
-            </Button>
+          {readOnly ? (
+            <span className="text-xs text-muted-foreground">Read-only mode — nothing is graded or saved</span>
           ) : (
-            <div className="flex items-center gap-3">
-              <p className="text-sm font-semibold">
-                Score: {result.earnedMarks} / {result.scorableMarks} ({result.percent}%)
-              </p>
-            </div>
+            <>
+              {!result && (
+                <span className="text-xs text-muted-foreground">
+                  {answeredCount} / {questions.reduce((s, q) => s + q.marks, 0)} answered
+                </span>
+              )}
+              {error && <p className="text-sm text-destructive">{error}</p>}
+              {!result ? (
+                <Button type="button" onClick={handleSubmit} disabled={pending}>
+                  {pending ? "Submitting..." : "Submit test"}
+                </Button>
+              ) : (
+                <div className="flex items-center gap-3">
+                  <p className="text-sm font-semibold">
+                    Score: {result.earnedMarks} / {result.scorableMarks} ({result.percent}%)
+                  </p>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>

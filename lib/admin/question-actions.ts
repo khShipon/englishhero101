@@ -40,6 +40,7 @@ function parseQuestionForm(formData: FormData) {
     marks: formData.get("marks") ?? "1",
     difficulty: formData.get("difficulty") ?? "none",
     correctAnswer: formData.get("correctAnswer") ?? "",
+    passageNumber: formData.get("passageNumber") ?? "",
     structuredData: formData.get("structuredData") ?? "{}",
   });
 }
@@ -85,8 +86,12 @@ async function writeOptions(
   }
 }
 
-function metadataFor(structuredData: StructuredData): Record<string, unknown> {
-  return structuredData.type === "matching" ? { pairs: structuredData.pairs } : {};
+function metadataFor(
+  structuredData: StructuredData,
+  passageNumber: number | null,
+): Record<string, unknown> {
+  const base = structuredData.type === "matching" ? { pairs: structuredData.pairs } : {};
+  return passageNumber !== null ? { ...base, passage_number: passageNumber } : base;
 }
 
 function correctAnswerFor(structuredData: StructuredData, rawCorrectAnswer: string | null) {
@@ -134,7 +139,7 @@ export async function createQuestion(
       difficulty: parsed.data.difficulty,
       sort_order: sortOrder,
       correct_answer: correctAnswerFor(parsed.data.structuredData, parsed.data.correctAnswer),
-      metadata: metadataFor(parsed.data.structuredData),
+      metadata: metadataFor(parsed.data.structuredData, parsed.data.passageNumber),
     })
     .select("id")
     .single();
@@ -177,7 +182,7 @@ export async function updateQuestion(
       marks: parsed.data.marks,
       difficulty: parsed.data.difficulty,
       correct_answer: correctAnswerFor(parsed.data.structuredData, parsed.data.correctAnswer),
-      metadata: metadataFor(parsed.data.structuredData),
+      metadata: metadataFor(parsed.data.structuredData, parsed.data.passageNumber),
     })
     .eq("id", id);
 

@@ -32,7 +32,7 @@ export function LessonForm({
   const status = defaultValues?.status ?? "draft";
 
   return (
-    <Card className="max-w-3xl">
+    <Card className="max-w-4xl">
       <CardHeader>
         <CardTitle>{mode === "create" ? "New lesson" : "Edit lesson"}</CardTitle>
       </CardHeader>

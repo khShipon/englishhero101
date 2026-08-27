@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getNodeById } from "@/lib/queries/content";
-import { getLessonsByNode } from "@/lib/queries/lessons";
+import { getLessonsByNode, getLessonsBySubtree } from "@/lib/queries/lessons";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -21,11 +21,17 @@ export const metadata: Metadata = { title: "Lessons — Admin — EnglishHero101
 
 export default async function NodeLessonsPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ subtree?: string }>;
 }) {
   const { id } = await params;
-  const [node, lessons] = await Promise.all([getNodeById(id), getLessonsByNode(id)]);
+  const { subtree } = await searchParams;
+  const [node, lessons] = await Promise.all([
+    getNodeById(id),
+    subtree ? getLessonsBySubtree(id) : getLessonsByNode(id),
+  ]);
 
   if (!node) {
     notFound();

@@ -34,7 +34,7 @@ export function VocabularyForm({
   );
 
   return (
-    <Card className="max-w-2xl">
+    <Card className="max-w-3xl">
       <CardHeader>
         <CardTitle>{mode === "create" ? "New vocabulary entry" : "Edit vocabulary entry"}</CardTitle>
       </CardHeader>

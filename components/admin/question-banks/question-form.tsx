@@ -9,6 +9,7 @@ import {
   type StructuredData,
 } from "@/lib/admin/question-validation";
 import type { Question } from "@/lib/queries/question-banks";
+import type { ReadingPassage } from "@/lib/queries/reading-passages";
 import { OptionsEditor, PairsEditor, OrderItemsEditor, type OptionValue, type PairValue } from "./structured-editors";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -47,14 +48,19 @@ export function QuestionForm({
   questionId,
   questionSetId,
   defaultValues,
+  passages,
 }: {
   mode: "create" | "edit";
   questionId?: string;
   questionSetId: string;
   defaultValues?: Question;
+  passages?: ReadingPassage[];
 }) {
   const action = mode === "create" ? createQuestion : updateQuestion;
   const [state, formAction, pending] = useActionState<QuestionFormState, FormData>(action, undefined);
+
+  const defaultPassageNumber = (defaultValues?.metadata as { passage_number?: number } | undefined)
+    ?.passage_number;
 
   const [questionType, setQuestionType] = useState<QuestionType>(
     defaultValues?.questionType ?? "multiple_choice",
@@ -104,8 +110,14 @@ export function QuestionForm({
     return { type: questionType as "fill_in_blank" | "short_answer" | "written_answer" };
   }, [questionType, options, items, pairs]);
 
+  // IELTS reading questions get a wider card — the question text and
+  // passage context are longer than a typical multiple-choice question,
+  // so the default max-w-2xl feels cramped once a passage picker is
+  // showing.
+  const isIeltsReading = !!passages && passages.length > 0;
+
   return (
-    <Card className="max-w-2xl">
+    <Card className={isIeltsReading ? "max-w-4xl" : "max-w-3xl"}>
       <CardHeader>
         <CardTitle>{mode === "create" ? "New question" : "Edit question"}</CardTitle>
       </CardHeader>
@@ -139,6 +151,28 @@ export function QuestionForm({
               </SelectContent>
             </Select>
           </div>
+
+          {passages && passages.length > 0 && (
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="passageNumber">Passage</Label>
+              <Select
+                name="passageNumber"
+                defaultValue={defaultPassageNumber ? String(defaultPassageNumber) : "none"}
+              >
+                <SelectTrigger id="passageNumber" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Not linked to a passage</SelectItem>
+                  {passages.map((passage) => (
+                    <SelectItem key={passage.id} value={String(passage.passageNumber)}>
+                      Passage {passage.passageNumber}: {passage.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="questionText">Question text</Label>
