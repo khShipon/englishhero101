@@ -18,7 +18,7 @@ import {
 import { cn } from "@/lib/utils";
 import { ChevronDown, ChevronUp, CircleCheck, CircleHelp, CircleX } from "lucide-react";
 
-type AnswerState = {
+export type AnswerState = {
   selectedOptionIds?: string[];
   text?: string;
   orderedOptionIds?: string[];
@@ -221,7 +221,7 @@ export function QuestionSetQuiz({
   );
 }
 
-function GradeBadge({ graded }: { graded: NonNullable<QuizResult["questions"][number]> }) {
+export function GradeBadge({ graded }: { graded: NonNullable<QuizResult["questions"][number]> }) {
   if (!graded.autoGraded) {
     return (
       <Badge variant="outline" className="shrink-0 gap-1">
@@ -240,7 +240,7 @@ function GradeBadge({ graded }: { graded: NonNullable<QuizResult["questions"][nu
   );
 }
 
-function ChoiceInput({
+export function ChoiceInput({
   question,
   multiple,
   value,
@@ -353,7 +353,7 @@ function OrderingInput({
   );
 }
 
-function MatchingInput({
+export function MatchingInput({
   question,
   value,
   disabled,

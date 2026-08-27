@@ -8,6 +8,7 @@ import {
   getPublishedQuestionSetsByLesson,
   getSanitizedQuestionsBySet,
 } from "@/lib/queries/question-banks";
+import { getReadingPassagesByLesson } from "@/lib/queries/reading-passages";
 import { getCurrentUser } from "@/lib/auth/dal";
 import { isLessonBookmarked } from "@/lib/queries/bookmarks";
 import { getLessonProgress } from "@/lib/queries/progress";
@@ -65,11 +66,12 @@ export async function LessonPageView({
   breadcrumbs: Breadcrumb[];
   basePath: string;
 }) {
-  const [{ previous, next }, related, questionSets, practiceSets] = await Promise.all([
+  const [{ previous, next }, related, questionSets, practiceSets, readingPassages] = await Promise.all([
     getAdjacentLessons(node.id, lesson.id),
     getRelatedLessons(node.id, lesson.id),
     getPublishedQuestionSetsByNode(node.id),
     getPublishedQuestionSetsByLesson(lesson.id),
+    getReadingPassagesByLesson(lesson.id),
   ]);
 
   const practicePanels = await Promise.all(
@@ -109,6 +111,7 @@ export async function LessonPageView({
                   title={set.title}
                   questionCount={questions.length}
                   questions={questions}
+                  passages={readingPassages}
                 />
               ) : null,
             )}

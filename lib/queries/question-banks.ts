@@ -364,10 +364,15 @@ export type SanitizedQuestion = {
   options: SanitizedOption[];
   matchingLeft: string[];
   matchingRight: string[];
+  // Which reading passage this question belongs to (reading-test
+  // questions only, tagged via metadata.passage_number) -- lets the
+  // split-screen practice UI show a question next to its own passage.
+  passageNumber: number | null;
 };
 
 export function sanitizeQuestion(question: Question): SanitizedQuestion {
   const matchingPairs = getMatchingPairs(question);
+  const rawPassageNumber = (question.metadata as { passage_number?: unknown } | null)?.passage_number;
   return {
     id: question.id,
     questionText: question.questionText,
@@ -376,6 +381,7 @@ export function sanitizeQuestion(question: Question): SanitizedQuestion {
     options: shuffle(question.options.map((option) => ({ id: option.id, optionText: option.optionText }))),
     matchingLeft: matchingPairs.map((pair) => pair.left),
     matchingRight: shuffle(matchingPairs.map((pair) => pair.right)),
+    passageNumber: typeof rawPassageNumber === "number" ? rawPassageNumber : null,
   };
 }
 
