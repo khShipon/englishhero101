@@ -5,7 +5,8 @@ import { getCurrentUser } from "@/lib/auth/dal";
 import { SearchBox } from "@/components/public/search-box";
 import { MobileNav } from "@/components/public/mobile-nav";
 import { buttonVariants } from "@/components/ui/button";
-import { User } from "lucide-react";
+import { CATEGORY_ICONS, DEFAULT_CATEGORY_ICON } from "@/lib/content-icons";
+import { GraduationCap, Home, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // Reads the session cookie, so it's the one part of the navbar that
@@ -43,7 +44,8 @@ export async function Navbar() {
     <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur-xs supports-backdrop-filter:bg-background/60">
       <div className="mx-auto flex h-14 max-w-6xl items-center gap-3 px-4">
         <MobileNav categories={publishedCategories} />
-        <Link href="/" className="shrink-0 text-lg font-semibold tracking-tight">
+        <Link href="/" className="flex shrink-0 items-center gap-1.5 text-lg font-semibold tracking-tight">
+          <GraduationCap className="size-5 text-primary" />
           EnglishHero101
         </Link>
         {/* Switches over at lg (1024px), not md (768px) — at tablet
@@ -56,19 +58,22 @@ export async function Navbar() {
         <nav className="hidden min-w-0 flex-1 items-center gap-1 overflow-x-auto lg:flex">
           <Link
             href="/"
-            className="shrink-0 rounded-lg px-2.5 py-1.5 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
+            className="flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
           >
-            Home
+            <Home className="size-3.5" /> Home
           </Link>
-          {publishedCategories.map((category) => (
-            <Link
-              key={category.id}
-              href={`/${category.slug}`}
-              className="shrink-0 rounded-lg px-2.5 py-1.5 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
-            >
-              {category.title}
-            </Link>
-          ))}
+          {publishedCategories.map((category) => {
+            const Icon = CATEGORY_ICONS[category.slug] ?? DEFAULT_CATEGORY_ICON;
+            return (
+              <Link
+                key={category.id}
+                href={`/${category.slug}`}
+                className="flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
+              >
+                <Icon className="size-3.5" /> {category.title}
+              </Link>
+            );
+          })}
         </nav>
         <SearchBox className="hidden max-w-xs shrink-0 lg:block" />
         <Suspense fallback={<AuthLinkFallback />}>

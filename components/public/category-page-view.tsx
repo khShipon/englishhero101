@@ -8,6 +8,18 @@ import { CategoryCard } from "@/components/public/category-card";
 import { LessonCard } from "@/components/public/lesson-card";
 import { QuestionSetCard } from "@/components/public/question-set-card";
 import { VocabularyCard } from "@/components/public/vocabulary-card";
+import { BookOpen, ClipboardList, LayoutGrid, Languages, type LucideIcon } from "lucide-react";
+
+function SectionHeading({ icon: Icon, children }: { icon: LucideIcon; children: React.ReactNode }) {
+  return (
+    <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold tracking-tight">
+      <span className="flex size-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
+        <Icon className="size-4" />
+      </span>
+      {children}
+    </h2>
+  );
+}
 
 // One reusable template for every category/section/topic page — IELTS,
 // Grammar, SSC, HSC, Spoken English, and any future category an admin
@@ -40,7 +52,7 @@ export async function CategoryPageView({
 
       {publishedChildren.length > 0 && (
         <section className="mt-10">
-          <h2 className="mb-4 text-lg font-semibold tracking-tight">Browse</h2>
+          <SectionHeading icon={LayoutGrid}>Browse</SectionHeading>
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
             {publishedChildren.map((child) => (
               <CategoryCard key={child.id} node={child} href={`${basePath}/${child.slug}`} />
@@ -51,7 +63,7 @@ export async function CategoryPageView({
 
       {lessons.length > 0 && (
         <section className="mt-10">
-          <h2 className="mb-4 text-lg font-semibold tracking-tight">Lessons</h2>
+          <SectionHeading icon={BookOpen}>Lessons</SectionHeading>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {lessons.map((lesson) => (
               <LessonCard key={lesson.id} lesson={lesson} />
@@ -62,7 +74,7 @@ export async function CategoryPageView({
 
       {questionSets.length > 0 && (
         <section className="mt-10">
-          <h2 className="mb-4 text-lg font-semibold tracking-tight">Question Banks</h2>
+          <SectionHeading icon={ClipboardList}>Question Banks</SectionHeading>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {questionSets.map((set) => (
               <QuestionSetCard key={set.id} questionSet={set} />
@@ -73,7 +85,7 @@ export async function CategoryPageView({
 
       {vocabulary.length > 0 && (
         <section className="mt-10">
-          <h2 className="mb-4 text-lg font-semibold tracking-tight">Vocabulary</h2>
+          <SectionHeading icon={Languages}>Vocabulary</SectionHeading>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {vocabulary.map((entry) => (
               <VocabularyCard key={entry.id} entry={entry} />

@@ -12,7 +12,8 @@ import {
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { SearchBox } from "@/components/public/search-box";
-import { Menu } from "lucide-react";
+import { CATEGORY_ICONS, DEFAULT_CATEGORY_ICON } from "@/lib/content-icons";
+import { GraduationCap, Home, Menu, User } from "lucide-react";
 
 export function MobileNav({ categories }: { categories: ContentNode[] }) {
   const [open, setOpen] = useState(false);
@@ -21,42 +22,50 @@ export function MobileNav({ categories }: { categories: ContentNode[] }) {
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetContent side="left" className="w-3/4 sm:max-w-xs">
         <SheetHeader>
-          <SheetTitle>EnglishHero101</SheetTitle>
+          <SheetTitle className="flex items-center gap-1.5">
+            <GraduationCap className="size-5 text-primary" /> EnglishHero101
+          </SheetTitle>
         </SheetHeader>
         <nav className="flex flex-col gap-1 px-4">
           <SearchBox className="mb-4" />
           <SheetClose
             nativeButton={false}
             render={
-              <Link href="/" className="rounded-lg px-2.5 py-2 text-sm font-medium hover:bg-muted" />
+              <Link
+                href="/"
+                className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-sm font-medium hover:bg-muted"
+              />
             }
           >
-            Home
+            <Home className="size-4 text-muted-foreground" /> Home
           </SheetClose>
-          {categories.map((category) => (
-            <SheetClose
-              key={category.id}
-              nativeButton={false}
-              render={
-                <Link
-                  href={`/${category.slug}`}
-                  className="rounded-lg px-2.5 py-2 text-sm font-medium hover:bg-muted"
-                />
-              }
-            >
-              {category.title}
-            </SheetClose>
-          ))}
+          {categories.map((category) => {
+            const Icon = CATEGORY_ICONS[category.slug] ?? DEFAULT_CATEGORY_ICON;
+            return (
+              <SheetClose
+                key={category.id}
+                nativeButton={false}
+                render={
+                  <Link
+                    href={`/${category.slug}`}
+                    className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-sm font-medium hover:bg-muted"
+                  />
+                }
+              >
+                <Icon className="size-4 text-muted-foreground" /> {category.title}
+              </SheetClose>
+            );
+          })}
           <SheetClose
             nativeButton={false}
             render={
               <Link
                 href="/profile"
-                className="rounded-lg px-2.5 py-2 text-sm font-medium hover:bg-muted"
+                className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-sm font-medium hover:bg-muted"
               />
             }
           >
-            Login / Profile
+            <User className="size-4 text-muted-foreground" /> Login / Profile
           </SheetClose>
         </nav>
       </SheetContent>
