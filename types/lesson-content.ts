@@ -15,11 +15,40 @@ export const CALLOUT_VARIANTS = [
 
 export type CalloutVariant = (typeof CALLOUT_VARIANTS)[number];
 
+// Word-style text highlighter colors (a small fixed palette, matching
+// how Word's highlighter offers a handful of preset swatches rather
+// than an open color picker).
+export const HIGHLIGHT_COLORS = ["yellow", "green", "blue", "pink"] as const;
+export type HighlightColor = (typeof HIGHLIGHT_COLORS)[number];
+
+// Paragraph/heading alignment, Word's own set (no full-justify-only
+// edge cases to worry about since this is just a CSS text-align).
+export const TEXT_ALIGNS = ["left", "center", "right", "justify"] as const;
+export type TextAlign = (typeof TEXT_ALIGNS)[number];
+
+// Only http(s), mailto, same-site-relative, and in-page anchor links
+// are accepted — closes off `javascript:`/`data:` URLs at the one
+// place all lesson content is validated before being persisted
+// (lib/admin/lesson-validation.ts pipes through lessonContentSchema),
+// so a link mark can never become a script-execution vector even
+// though the renderer sets its href directly.
+const SAFE_HREF = /^(https?:\/\/|mailto:|\/|#)/i;
+
 const markSchema = z.union([
   z.object({ type: z.literal("bold") }),
   z.object({ type: z.literal("italic") }),
   z.object({ type: z.literal("underline") }),
+  z.object({ type: z.literal("strike") }),
+  z.object({ type: z.literal("highlight"), attrs: z.object({ color: z.enum(HIGHLIGHT_COLORS) }) }),
+  z.object({
+    type: z.literal("link"),
+    attrs: z.object({
+      href: z.string().min(1).max(2000).regex(SAFE_HREF, { error: "Unsupported link type." }),
+    }),
+  }),
 ]);
+
+export type LessonMark = z.infer<typeof markSchema>;
 
 const textNodeSchema = z.object({
   type: z.literal("text"),
@@ -29,8 +58,12 @@ const textNodeSchema = z.object({
 
 export type LessonNode =
   | z.infer<typeof textNodeSchema>
-  | { type: "paragraph"; content?: LessonNode[] }
-  | { type: "heading"; attrs: { level: 2 | 3 | 4 }; content?: LessonNode[] }
+  | { type: "paragraph"; attrs?: { textAlign?: TextAlign | null }; content?: LessonNode[] }
+  | {
+      type: "heading";
+      attrs: { level: 2 | 3 | 4; textAlign?: TextAlign | null };
+      content?: LessonNode[];
+    }
   | { type: "bulletList"; content?: LessonNode[] }
   | { type: "orderedList"; content?: LessonNode[] }
   | { type: "listItem"; content?: LessonNode[] }
@@ -40,6 +73,7 @@ export type LessonNode =
   | { type: "tableCell"; content?: LessonNode[] }
   | { type: "tableHeader"; content?: LessonNode[] }
   | { type: "hardBreak" }
+  | { type: "horizontalRule" }
   | { type: "callout"; attrs: { variant: CalloutVariant }; content?: LessonNode[] }
   | { type: "pronounce"; attrs: { text: string; label?: string } };
 
@@ -52,10 +86,17 @@ export type LessonNode =
 const lessonNodeSchema: z.ZodType<LessonNode> = z.lazy(() =>
   z.discriminatedUnion("type", [
     textNodeSchema,
-    z.object({ type: z.literal("paragraph"), content: z.array(lessonNodeSchema).optional() }),
+    z.object({
+      type: z.literal("paragraph"),
+      attrs: z.object({ textAlign: z.enum(TEXT_ALIGNS).nullable().optional() }).optional(),
+      content: z.array(lessonNodeSchema).optional(),
+    }),
     z.object({
       type: z.literal("heading"),
-      attrs: z.object({ level: z.union([z.literal(2), z.literal(3), z.literal(4)]) }),
+      attrs: z.object({
+        level: z.union([z.literal(2), z.literal(3), z.literal(4)]),
+        textAlign: z.enum(TEXT_ALIGNS).nullable().optional(),
+      }),
       content: z.array(lessonNodeSchema).optional(),
     }),
     z.object({ type: z.literal("bulletList"), content: z.array(lessonNodeSchema).optional() }),
@@ -67,6 +108,7 @@ const lessonNodeSchema: z.ZodType<LessonNode> = z.lazy(() =>
     z.object({ type: z.literal("tableCell"), content: z.array(lessonNodeSchema).optional() }),
     z.object({ type: z.literal("tableHeader"), content: z.array(lessonNodeSchema).optional() }),
     z.object({ type: z.literal("hardBreak") }),
+    z.object({ type: z.literal("horizontalRule") }),
     z.object({
       type: z.literal("callout"),
       attrs: z.object({ variant: z.enum(CALLOUT_VARIANTS) }),

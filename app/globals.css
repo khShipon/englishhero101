@@ -179,3 +179,23 @@
   --callout-border: oklch(0.55 0.13 150);
   --callout-label: "Answer";
 }
+
+/* Word-style text highlighter colors (lesson content's `highlight`
+   mark). Text stays dark-on-light-swatch regardless of site theme,
+   same as Word's own highlighter always does. */
+mark[data-color="yellow"] {
+  background-color: oklch(0.92 0.18 95);
+  color: oklch(0.145 0 0);
+}
+mark[data-color="green"] {
+  background-color: oklch(0.92 0.14 145);
+  color: oklch(0.145 0 0);
+}
+mark[data-color="blue"] {
+  background-color: oklch(0.92 0.08 240);
+  color: oklch(0.145 0 0);
+}
+mark[data-color="pink"] {
+  background-color: oklch(0.92 0.1 350);
+  color: oklch(0.145 0 0);
+}
