@@ -16,7 +16,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { Clock } from "lucide-react";
+import { Clock, X } from "lucide-react";
 
 const TEST_SECONDS = 60 * 60;
 const CHOICE_TYPES = new Set(["multiple_choice", "true_false", "multiple_answer"]);
@@ -46,12 +46,14 @@ export function ReadingTestMode({
   passages,
   questions,
   readOnly = false,
+  onExit,
 }: {
   questionSetId: string;
   title: string;
   passages: ReadingPassage[];
   questions: SanitizedQuestion[];
   readOnly?: boolean;
+  onExit?: () => void;
 }) {
   const [activePassage, setActivePassage] = useState(passages[0]?.passageNumber ?? 1);
   const [answers, setAnswers] = useState<Record<string, AnswerState>>({});
@@ -68,6 +70,17 @@ export function ReadingTestMode({
     }, 1000);
     return () => clearInterval(interval);
   }, [result, readOnly]);
+
+  // This renders as a fixed full-viewport overlay (see the root div
+  // below) so the page behind it must not also scroll — same reasoning
+  // any full-screen modal/dialog has for locking body scroll while open.
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, []);
 
   const resultByQuestionId = useMemo(() => {
     if (!result) return null;
@@ -132,10 +145,21 @@ export function ReadingTestMode({
   const answeredCount = questions.filter(isAnswered).length;
 
   return (
-    <div className="flex flex-col overflow-hidden rounded-lg border bg-background">
-      {/* Top bar: title, timer, passage tabs */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b bg-muted/30 px-4 py-3">
+    <div className="fixed inset-0 z-50 flex flex-col bg-background">
+      {/* Top bar: title, exit, timer, passage tabs */}
+      <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b bg-muted/30 px-4 py-3">
         <div className="flex items-center gap-2">
+          {onExit && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              aria-label="Exit test"
+              onClick={onExit}
+            >
+              <X />
+            </Button>
+          )}
           <span className="text-sm font-semibold">{title}</span>
         </div>
         <div className="flex items-center gap-4">
@@ -156,7 +180,7 @@ export function ReadingTestMode({
           )}
         </div>
       </div>
-      <div className="flex gap-1 border-b bg-muted/10 px-4 pt-2">
+      <div className="flex shrink-0 gap-1 border-b bg-muted/10 px-4 pt-2">
         {passages.map((passage) => (
           <button
             key={passage.passageNumber}
@@ -174,9 +198,12 @@ export function ReadingTestMode({
         ))}
       </div>
 
-      {/* Split screen: passage left, questions right */}
-      <div className="grid grid-cols-1 md:grid-cols-2">
-        <div className="h-[calc(100vh-230px)] min-h-[420px] overflow-y-auto border-b p-5 md:border-b-0 md:border-r">
+      {/* Split screen: passage left, questions right (stacked on
+          mobile). flex-1 + min-h-0 on both the row and each pane makes
+          every pane share the remaining viewport height equally and
+          scroll independently, instead of the page itself scrolling. */}
+      <div className="flex min-h-0 flex-1 flex-col md:flex-row">
+        <div className="min-h-0 flex-1 overflow-y-auto border-b p-5 md:border-b-0 md:border-r">
           <h3 className="mb-3 font-semibold">
             Passage {activePassageData?.passageNumber}: {activePassageData?.title}
           </h3>
@@ -190,7 +217,7 @@ export function ReadingTestMode({
           </div>
         </div>
 
-        <div className="h-[calc(100vh-230px)] min-h-[420px] overflow-y-auto p-5">
+        <div className="min-h-0 flex-1 overflow-y-auto p-5">
           <div className="flex flex-col gap-4">
             {activeQuestions.map((question) => {
               const graded = resultByQuestionId?.get(question.id) ?? null;
@@ -263,9 +290,11 @@ export function ReadingTestMode({
         </div>
       </div>
 
-      {/* Bottom bar: question navigator + submit */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-t bg-muted/30 px-4 py-3">
-        <div className="flex flex-wrap gap-1">
+      {/* Bottom bar: question navigator + submit. The chip navigator
+          scrolls on its own (capped height) for long tests so it can
+          never push the submit button/status off screen. */}
+      <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-t bg-muted/30 px-4 py-3">
+        <div className="flex max-h-20 flex-wrap gap-1 overflow-y-auto">
           {questions.map((question, index) => {
             const label = questionLabel(question, index, questions);
             const answered = isAnswered(question);

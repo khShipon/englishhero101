@@ -66,6 +66,7 @@ export function PracticePanel({
         passages={passages!}
         questions={questions}
         readOnly={mode === "read"}
+        onExit={() => setMode("idle")}
       />
     );
   }
