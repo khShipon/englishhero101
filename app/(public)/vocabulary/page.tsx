@@ -10,6 +10,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 export const metadata: Metadata = {
   title: "Vocabulary — EnglishHero101",
   description: "Browse English vocabulary with Bangla meanings, definitions, and examples.",
+  alternates: { canonical: "/vocabulary" },
 };
 
 // searchParams (search query, page number) drives the list directly

@@ -16,7 +16,22 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { id } = await params;
   const questionSet = await getPublishedQuestionSetById(id);
-  return { title: questionSet ? `${questionSet.title} — EnglishHero101` : "EnglishHero101" };
+  if (!questionSet) {
+    return { title: "EnglishHero101" };
+  }
+  const title = `${questionSet.title} — EnglishHero101`;
+  const examMeta = [questionSet.examType, questionSet.subject, questionSet.year]
+    .filter(Boolean)
+    .join(" · ");
+  const description = questionSet.description || examMeta || "Practice questions on EnglishHero101.";
+  const canonical = `/question-banks/${id}`;
+  return {
+    title,
+    description,
+    alternates: { canonical },
+    openGraph: { title, description, url: canonical, type: "website" },
+    twitter: { title, description },
+  };
 }
 
 export default async function PublicQuestionSetPage({

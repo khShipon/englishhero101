@@ -10,6 +10,7 @@ import { LessonCard } from "@/components/public/lesson-card";
 import { VocabularyCard } from "@/components/public/vocabulary-card";
 import { QuestionSetCard } from "@/components/public/question-set-card";
 import { buttonVariants } from "@/components/ui/button";
+import { SITE_URL, SITE_NAME } from "@/lib/site-config";
 import {
   ArrowRight,
   BookOpen,
@@ -28,7 +29,35 @@ export const metadata: Metadata = {
   title: "EnglishHero101 — Learn English Online",
   description:
     "SSC, HSC, University, IELTS, Spoken English, Grammar, and Vocabulary lessons for students in Bangladesh.",
+  alternates: { canonical: "/" },
 };
+
+// Structured data (schema.org) so search engines can understand the
+// site as an educational resource and, for WebSite + SearchAction,
+// potentially render a sitelinks search box in results — a plain
+// meta-tag description alone doesn't convey either of these.
+const JSON_LD = [
+  {
+    "@context": "https://schema.org",
+    "@type": "EducationalOrganization",
+    name: SITE_NAME,
+    url: SITE_URL,
+    description:
+      "Free SSC, HSC, University, IELTS, Spoken English, Grammar, and Vocabulary lessons for students in Bangladesh.",
+    areaServed: "BD",
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    name: SITE_NAME,
+    url: SITE_URL,
+    potentialAction: {
+      "@type": "SearchAction",
+      target: `${SITE_URL}/search?q={search_term_string}`,
+      "query-input": "required name=search_term_string",
+    },
+  },
+];
 
 function Section({
   title,
@@ -78,6 +107,13 @@ export default async function HomePage() {
 
   return (
     <div className="flex flex-col">
+      {JSON_LD.map((schema) => (
+        <script
+          key={schema["@type"]}
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+        />
+      ))}
       <section className="relative overflow-hidden border-b bg-gradient-to-b from-primary/5 via-muted/30 to-background">
         <div className="mx-auto flex max-w-3xl flex-col items-center gap-6 px-4 py-20 text-center">
           <span className="flex items-center gap-1.5 rounded-full border bg-background px-3 py-1 text-xs font-medium text-muted-foreground shadow-sm">

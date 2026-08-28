@@ -7,7 +7,14 @@ import { LessonCard } from "@/components/public/lesson-card";
 import { VocabularyCard } from "@/components/public/vocabulary-card";
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 
-export const metadata: Metadata = { title: "Search — EnglishHero101" };
+export const metadata: Metadata = {
+  title: "Search — EnglishHero101",
+  description: "Search lessons, vocabulary, and grammar across EnglishHero101.",
+  // Fixed regardless of the ?q= value — every query renders through
+  // this same page, so canonicalizing to the bare URL keeps search
+  // engines from treating each query string as separate content.
+  alternates: { canonical: "/search" },
+};
 
 // searchParams drives the query directly (no meaningful static shell
 // without it), so — same as app/(public)/[...slug]/page.tsx — this
