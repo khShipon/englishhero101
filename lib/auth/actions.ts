@@ -2,15 +2,12 @@
 
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { requireUser } from "@/lib/auth/dal";
 import {
   loginSchema,
   registerSchema,
   forgotPasswordSchema,
   resetPasswordSchema,
-  updateProfileSchema,
 } from "@/lib/auth/validation";
 
 export type AuthFormState =
@@ -165,35 +162,6 @@ export async function updatePassword(
   }
 
   redirect("/profile");
-}
-
-export async function updateProfile(
-  _state: AuthFormState,
-  formData: FormData,
-): Promise<AuthFormState> {
-  const fullName = String(formData.get("fullName") ?? "");
-  const parsed = updateProfileSchema.safeParse({ fullName });
-
-  if (!parsed.success) {
-    return {
-      fieldErrors: parsed.error.flatten().fieldErrors as Record<string, string[]>,
-      values: { fullName },
-    };
-  }
-
-  const user = await requireUser();
-  const supabase = await createClient();
-  const { error } = await supabase
-    .from("profiles")
-    .update({ full_name: parsed.data.fullName })
-    .eq("id", user.id);
-
-  if (error) {
-    return { error: "Could not update your profile. Please try again." };
-  }
-
-  revalidatePath("/profile");
-  return { success: "Profile updated." };
 }
 
 export async function signOut() {

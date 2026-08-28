@@ -5,7 +5,7 @@ import { updateSession } from "@/lib/supabase/proxy";
 // from the cookie. Role-based authorization (admin/editor for /admin) is
 // enforced separately in lib/auth/dal.ts against the database, since role
 // isn't available here without a slow per-request DB call.
-const PROTECTED_PREFIXES = ["/admin", "/profile"];
+const PROTECTED_PREFIXES = ["/admin", "/profile", "/settings"];
 const GUEST_ONLY_PATHS = ["/login", "/register", "/forgot-password"];
 
 export async function proxy(request: NextRequest) {

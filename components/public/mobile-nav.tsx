@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { SearchBox } from "@/components/public/search-box";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { CATEGORY_ICONS, DEFAULT_CATEGORY_ICON } from "@/lib/content-icons";
 import { GraduationCap, Home, Menu, User } from "lucide-react";
 
@@ -22,8 +23,11 @@ export function MobileNav({ categories }: { categories: ContentNode[] }) {
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetContent side="left" className="w-3/4 sm:max-w-xs">
         <SheetHeader>
-          <SheetTitle className="flex items-center gap-1.5">
-            <GraduationCap className="size-5 text-primary" /> EnglishHero101
+          <SheetTitle className="flex items-center justify-between gap-1.5">
+            <span className="flex items-center gap-1.5">
+              <GraduationCap className="size-5 text-primary" /> EnglishHero101
+            </span>
+            <ThemeToggle className="flex size-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground" />
           </SheetTitle>
         </SheetHeader>
         <nav className="flex flex-col gap-1 px-4">

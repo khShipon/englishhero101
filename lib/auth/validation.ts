@@ -33,10 +33,3 @@ export const resetPasswordSchema = z
     error: "Passwords do not match.",
     path: ["confirmPassword"],
   });
-
-export const updateProfileSchema = z.object({
-  fullName: z
-    .string()
-    .trim()
-    .min(2, { error: "Name must be at least 2 characters long." }),
-});

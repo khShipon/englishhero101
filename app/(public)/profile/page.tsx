@@ -4,8 +4,6 @@ import { requireUser } from "@/lib/auth/dal";
 import { getContinueLearning, getCompletedLessons } from "@/lib/queries/progress";
 import { getUserBookmarks } from "@/lib/queries/bookmarks";
 import { getSpokenCourseProgress } from "@/lib/queries/course-progress";
-import { ProfileForm } from "@/components/auth/profile-form";
-import { SignOutButton } from "@/components/auth/sign-out-button";
 import {
   Card,
   CardContent,
@@ -13,18 +11,18 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { BookOpen, Bookmark, CircleCheckBig, GraduationCap } from "lucide-react";
+import { buttonVariants } from "@/components/ui/button";
+import { BookOpen, Bookmark, CircleCheckBig, GraduationCap, Rocket, Settings } from "lucide-react";
 
 export const metadata: Metadata = { title: "Your profile — EnglishHero101" };
 
-// Entirely per-user (progress, bookmarks, account form) — no static
-// shell to gain here, so it opts out of Cache Components validation
-// rather than being carved up with Suspense boundaries for no benefit.
+// Entirely per-user (progress, bookmarks) — no static shell to gain
+// here, so it opts out of Cache Components validation rather than
+// being carved up with Suspense boundaries for no benefit.
 export const instant = false;
 
 export default async function ProfilePage() {
   const user = await requireUser();
-  const roleLabel = user.role.charAt(0).toUpperCase() + user.role.slice(1);
 
   const [continueLearning, bookmarks, completed, courseProgress] = await Promise.all([
     getContinueLearning(),
@@ -35,22 +33,20 @@ export default async function ProfilePage() {
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 px-4 py-12">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Your profile</h1>
-        <p className="text-sm text-muted-foreground">Manage your account details.</p>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">
+            {user.fullName ? `Welcome back, ${user.fullName.split(" ")[0]}` : "Your profile"}
+          </h1>
+          <p className="text-sm text-muted-foreground">Pick up right where you left off.</p>
+        </div>
+        <Link
+          href="/settings"
+          className={buttonVariants({ variant: "outline", size: "sm", className: "shrink-0" })}
+        >
+          <Settings /> Settings
+        </Link>
       </div>
-      <Card>
-        <CardHeader>
-          <CardTitle>Account</CardTitle>
-          <CardDescription>
-            {user.email} · {roleLabel}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ProfileForm fullName={user.fullName ?? ""} />
-        </CardContent>
-      </Card>
-
       {courseProgress && courseProgress.totalLessons > 0 && (
         <Card>
           <CardHeader>
@@ -106,6 +102,28 @@ export default async function ProfilePage() {
         </Card>
       )}
 
+      {!(courseProgress && courseProgress.totalLessons > 0) &&
+        continueLearning.length === 0 &&
+        bookmarks.length === 0 &&
+        completed.length === 0 && (
+          <Card>
+            <CardContent className="flex flex-col items-center gap-3 py-8 text-center">
+              <span className="flex size-10 items-center justify-center rounded-full bg-primary/10 text-primary">
+                <Rocket className="size-5" />
+              </span>
+              <div>
+                <p className="font-medium">You haven&apos;t started a lesson yet</p>
+                <p className="text-sm text-muted-foreground">
+                  Pick a category and your progress will show up here.
+                </p>
+              </div>
+              <Link href="/" className={buttonVariants({ size: "sm" })}>
+                Browse lessons
+              </Link>
+            </CardContent>
+          </Card>
+        )}
+
       {bookmarks.length > 0 && (
         <Card>
           <CardHeader>
@@ -147,8 +165,6 @@ export default async function ProfilePage() {
           </CardContent>
         </Card>
       )}
-
-      <SignOutButton />
     </div>
   );
 }

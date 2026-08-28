@@ -4,6 +4,7 @@ import { getChildren } from "@/lib/queries/content";
 import { getCurrentUser } from "@/lib/auth/dal";
 import { SearchBox } from "@/components/public/search-box";
 import { MobileNav } from "@/components/public/mobile-nav";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { buttonVariants } from "@/components/ui/button";
 import { CATEGORY_ICONS, DEFAULT_CATEGORY_ICON } from "@/lib/content-icons";
 import { GraduationCap, Home, User } from "lucide-react";
@@ -76,6 +77,7 @@ export async function Navbar() {
           })}
         </nav>
         <SearchBox className="hidden max-w-xs shrink-0 lg:block" />
+        <ThemeToggle className="hidden shrink-0 items-center justify-center rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground sm:flex" />
         <Suspense fallback={<AuthLinkFallback />}>
           <AuthLink />
         </Suspense>

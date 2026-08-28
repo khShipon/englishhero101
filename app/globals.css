@@ -131,13 +131,17 @@
 }
 
 /* Lesson content callouts (example/note/highlight/grammar-rule/question/answer).
-   Shared by the Tiptap editor and the read-only LessonRenderer. */
+   Shared by the Tiptap editor and the read-only LessonRenderer. Text
+   stays dark-on-pastel regardless of site theme — these backgrounds
+   are always light, so an explicit dark color keeps them readable in
+   dark mode instead of inheriting the page's (light) foreground. */
 [data-callout] {
   margin: 1em 0;
   padding: 0.875em 1em;
   border-radius: 0.5rem;
   border-left: 3px solid var(--callout-border, var(--border));
   background: var(--callout-bg, var(--muted));
+  color: oklch(0.145 0 0);
 }
 [data-callout]::before {
   content: var(--callout-label);
