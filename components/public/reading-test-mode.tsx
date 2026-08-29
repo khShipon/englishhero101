@@ -405,7 +405,12 @@ function TfngGroup({
         {questions.map((question) => {
           const graded = resultByQuestionId?.get(question.id) ?? null;
           const label = questionLabel(question, allQuestions.indexOf(question), allQuestions);
-          const selectedId = answers[question.id]?.selectedOptionIds?.[0] ?? "";
+          const selectedOptionId = answers[question.id]?.selectedOptionIds?.[0] ?? "";
+          // Select.Value with no render function just stringifies the
+          // raw value it's given, so the value has to be the option's
+          // own display text (like MatchingInput's Select below) —
+          // not its id — or the dropdown shows the opaque option id.
+          const selectedText = question.options.find((o) => o.id === selectedOptionId)?.optionText ?? "";
           return (
             <div key={question.id} ref={(el) => setQuestionRef(question.id, el)} className="flex flex-col gap-1">
               <div className="flex flex-wrap items-center gap-2">
@@ -413,8 +418,11 @@ function TfngGroup({
                   {label}
                 </span>
                 <Select
-                  value={selectedId}
-                  onValueChange={(value) => onChange(question.id, { selectedOptionIds: value ? [value] : [] })}
+                  value={selectedText}
+                  onValueChange={(text) => {
+                    const option = question.options.find((o) => o.optionText === text);
+                    onChange(question.id, { selectedOptionIds: option ? [option.id] : [] });
+                  }}
                   disabled={disabled}
                 >
                   <SelectTrigger
@@ -427,7 +435,7 @@ function TfngGroup({
                   </SelectTrigger>
                   <SelectContent>
                     {question.options.map((option) => (
-                      <SelectItem key={option.id} value={option.id}>
+                      <SelectItem key={option.id} value={option.optionText}>
                         {option.optionText}
                       </SelectItem>
                     ))}
