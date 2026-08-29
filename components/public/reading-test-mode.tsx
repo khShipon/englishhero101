@@ -15,12 +15,100 @@ import {
 } from "@/components/public/question-set-quiz";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { Clock, X } from "lucide-react";
 
 const TEST_SECONDS = 60 * 60;
 const CHOICE_TYPES = new Set(["multiple_choice", "true_false", "multiple_answer"]);
 const TEXT_TYPES = new Set(["fill_in_blank", "short_answer"]);
+
+// "Which paragraph contains the following information? Write the
+// correct letter, A-F." (IELTS Matching Information) questions were
+// transcribed as free-text fill-in-blank, so the real test's own
+// range tells us which letters are actually valid — same real-CD-test
+// reasoning as the split-screen layout itself: constrain the answer to
+// what's actually possible instead of a bare text box.
+const PARAGRAPH_LETTER_RE = /Write the correct letter,\s*([A-Z])[–-]([A-Z])\./;
+
+function paragraphLetterOptions(question: SanitizedQuestion): string[] | null {
+  if (!TEXT_TYPES.has(question.questionType)) return null;
+  const match = question.questionText.match(PARAGRAPH_LETTER_RE);
+  if (!match) return null;
+  const start = match[1].charCodeAt(0);
+  const end = match[2].charCodeAt(0);
+  if (end < start || end - start > 25) return null;
+  return Array.from({ length: end - start + 1 }, (_, i) => String.fromCharCode(start + i));
+}
+
+// "Complete the summary" questions were transcribed as one row per
+// blank, each carrying the *entire* shared paragraph as its question
+// text (only the blank number differs) — correct for grading, but
+// rendered flat that's the same long paragraph repeated once per
+// blank. This detects that shape so the paragraph can be shown once
+// with each blank as an inline input, the way the real test presents
+// it, instead of N near-identical cards.
+const SUMMARY_QUESTION_RE =
+  /^Complete the summary below\.\s*(.*?)\s*Blank\s*\((\d+)\)\.\s*Summary:\s*([\s\S]+)$/;
+
+type RenderItem =
+  | { kind: "single"; question: SanitizedQuestion }
+  | {
+      kind: "summary";
+      instructions: string;
+      summaryBody: string;
+      questions: SanitizedQuestion[];
+    };
+
+function matchSummaryQuestion(question: SanitizedQuestion) {
+  if (question.questionType !== "fill_in_blank") return null;
+  const match = question.questionText.match(SUMMARY_QUESTION_RE);
+  if (!match) return null;
+  return { instructions: match[1].trim(), blankNumber: Number(match[2]), summaryBody: match[3].trim() };
+}
+
+// Groups consecutive questions that share an identical summary body
+// into one cluster; anything else (including a summary question with
+// no matching neighbor, which shouldn't happen but is handled safely)
+// passes through as its own single-question item.
+function buildRenderItems(questions: SanitizedQuestion[]): RenderItem[] {
+  const items: RenderItem[] = [];
+  let i = 0;
+  while (i < questions.length) {
+    const parsed = matchSummaryQuestion(questions[i]);
+    if (!parsed) {
+      items.push({ kind: "single", question: questions[i] });
+      i++;
+      continue;
+    }
+    const cluster = [questions[i]];
+    let j = i + 1;
+    while (j < questions.length) {
+      const nextParsed = matchSummaryQuestion(questions[j]);
+      if (!nextParsed || nextParsed.summaryBody !== parsed.summaryBody) break;
+      cluster.push(questions[j]);
+      j++;
+    }
+    if (cluster.length > 1) {
+      items.push({
+        kind: "summary",
+        instructions: parsed.instructions,
+        summaryBody: parsed.summaryBody,
+        questions: cluster,
+      });
+    } else {
+      items.push({ kind: "single", question: questions[i] });
+    }
+    i = j;
+  }
+  return items;
+}
 
 function formatTime(totalSeconds: number) {
   const m = Math.floor(totalSeconds / 60);
@@ -38,6 +126,90 @@ function questionLabel(question: SanitizedQuestion, index: number, all: Sanitize
     return `${num}–${num + question.marks - 1}`;
   }
   return String(num);
+}
+
+// Renders a "complete the summary" cluster as one flowing paragraph
+// with each blank as an inline input, splitting the shared summary
+// text on its "(NN)........." markers and matching each captured
+// number back to the question that owns that blank number.
+function SummaryCluster({
+  instructions,
+  summaryBody,
+  questions,
+  answers,
+  disabled,
+  onChange,
+  resultByQuestionId,
+  setQuestionRef,
+}: {
+  instructions: string;
+  summaryBody: string;
+  questions: SanitizedQuestion[];
+  answers: Record<string, AnswerState>;
+  disabled: boolean;
+  onChange: (questionId: string, patch: AnswerState) => void;
+  resultByQuestionId: Map<string, NonNullable<QuizResult["questions"][number]>> | null;
+  setQuestionRef: (questionId: string, el: HTMLElement | null) => void;
+}) {
+  const byBlankNumber = new Map<number, SanitizedQuestion>();
+  for (const question of questions) {
+    const parsed = matchSummaryQuestion(question);
+    if (parsed) byBlankNumber.set(parsed.blankNumber, question);
+  }
+
+  const parts = summaryBody.split(/\((\d+)\)\.+/);
+  const explanations = questions
+    .map((question) => ({ question, graded: resultByQuestionId?.get(question.id) }))
+    .filter((entry) => entry.graded?.explanation);
+
+  return (
+    <div className="rounded-md border p-3">
+      <p className="mb-2 text-sm font-medium">Complete the summary below. {instructions}</p>
+      <p className="leading-loose">
+        {parts.map((part, index) => {
+          if (index % 2 === 0) return <span key={index}>{part}</span>;
+          const question = byBlankNumber.get(Number(part));
+          if (!question) return <span key={index}>({part})...........</span>;
+          const graded = resultByQuestionId?.get(question.id) ?? null;
+          return (
+            <span
+              key={index}
+              ref={(el) => setQuestionRef(question.id, el)}
+              className="mx-1 inline-flex items-baseline gap-1"
+            >
+              <Input
+                value={answers[question.id]?.text ?? ""}
+                disabled={disabled}
+                onChange={(e) => onChange(question.id, { text: e.target.value })}
+                placeholder={part}
+                className={cn(
+                  "inline-block h-7 w-32 px-1.5 py-0.5 align-baseline text-sm",
+                  graded && (graded.correct ? "border-emerald-600" : "border-destructive"),
+                )}
+              />
+              {graded && !graded.correct && graded.correctText && (
+                <span className="text-xs whitespace-nowrap text-muted-foreground">
+                  ({graded.correctText})
+                </span>
+              )}
+            </span>
+          );
+        })}
+      </p>
+      {explanations.length > 0 && (
+        <div className="mt-3 flex flex-col gap-1.5">
+          {explanations.map(({ question, graded }) => {
+            const parsed = matchSummaryQuestion(question);
+            return (
+              <p key={question.id} className="rounded-md bg-muted/50 p-2.5 text-sm text-muted-foreground">
+                <strong>({parsed?.blankNumber}):</strong> {graded!.explanation}
+              </p>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
 }
 
 export function ReadingTestMode({
@@ -61,7 +233,10 @@ export function ReadingTestMode({
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const [secondsLeft, setSecondsLeft] = useState(TEST_SECONDS);
-  const questionRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const questionRefs = useRef<Record<string, HTMLElement | null>>({});
+  const setQuestionRef = (questionId: string, el: HTMLElement | null) => {
+    questionRefs.current[questionId] = el;
+  };
 
   useEffect(() => {
     if (result || readOnly) return;
@@ -140,9 +315,13 @@ export function ReadingTestMode({
     });
   }
 
-  const activeQuestions = questionsByPassage.get(activePassage) ?? [];
+  const activeQuestions = useMemo(
+    () => questionsByPassage.get(activePassage) ?? [],
+    [questionsByPassage, activePassage],
+  );
   const activePassageData = passages.find((p) => p.passageNumber === activePassage);
   const answeredCount = questions.filter(isAnswered).length;
+  const renderItems = useMemo(() => buildRenderItems(activeQuestions), [activeQuestions]);
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-background">
@@ -219,15 +398,31 @@ export function ReadingTestMode({
 
         <div className="min-h-0 flex-1 overflow-y-auto p-5">
           <div className="flex flex-col gap-4">
-            {activeQuestions.map((question) => {
+            {renderItems.map((item) => {
+              if (item.kind === "summary") {
+                return (
+                  <SummaryCluster
+                    key={item.questions[0].id}
+                    instructions={item.instructions}
+                    summaryBody={item.summaryBody}
+                    questions={item.questions}
+                    answers={answers}
+                    disabled={!!result || readOnly}
+                    onChange={updateAnswer}
+                    resultByQuestionId={resultByQuestionId}
+                    setQuestionRef={setQuestionRef}
+                  />
+                );
+              }
+
+              const question = item.question;
               const graded = resultByQuestionId?.get(question.id) ?? null;
               const label = questionLabel(question, questions.indexOf(question), questions);
+              const letterOptions = paragraphLetterOptions(question);
               return (
                 <div
                   key={question.id}
-                  ref={(el) => {
-                    questionRefs.current[question.id] = el;
-                  }}
+                  ref={(el) => setQuestionRef(question.id, el)}
                   className="rounded-md border p-3"
                 >
                   <div className="mb-2 flex items-start justify-between gap-2">
@@ -253,12 +448,37 @@ export function ReadingTestMode({
 
                   {TEXT_TYPES.has(question.questionType) && (
                     <div className="flex flex-col gap-2">
-                      <Input
-                        value={answers[question.id]?.text ?? ""}
-                        disabled={!!result || readOnly}
-                        onChange={(e) => updateAnswer(question.id, { text: e.target.value })}
-                        placeholder="Type your answer"
-                      />
+                      {letterOptions ? (
+                        <Select
+                          value={answers[question.id]?.text ?? ""}
+                          onValueChange={(value) => updateAnswer(question.id, { text: value ?? "" })}
+                          disabled={!!result || readOnly}
+                        >
+                          <SelectTrigger
+                            className={cn(
+                              "w-28",
+                              graded &&
+                                (graded.correct ? "border-emerald-600" : "border-destructive"),
+                            )}
+                          >
+                            <SelectValue placeholder="Letter" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {letterOptions.map((letter) => (
+                              <SelectItem key={letter} value={letter}>
+                                {letter}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <Input
+                          value={answers[question.id]?.text ?? ""}
+                          disabled={!!result || readOnly}
+                          onChange={(e) => updateAnswer(question.id, { text: e.target.value })}
+                          placeholder="Type your answer"
+                        />
+                      )}
                       {graded && !graded.correct && graded.correctText && (
                         <p className="text-sm text-muted-foreground">
                           Correct answer:{" "}

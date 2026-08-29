@@ -370,19 +370,24 @@ export function MatchingInput({
     <div className="flex flex-col gap-3">
       <ul className="flex flex-col gap-2">
         {question.matchingLeft.map((left) => (
-          <li key={left} className="flex items-center justify-between gap-3">
+          <li key={left} className="flex flex-col gap-1.5">
             <span className="text-sm">{left}</span>
             <Select
               value={value[left] ?? ""}
               onValueChange={(next) => onChange({ ...value, [left]: next ?? "" })}
               disabled={disabled}
             >
-              <SelectTrigger className="w-48">
+              {/* The base trigger/item styles assume a short one-word
+                  value (e.g. difficulty, a letter) and hard-clip
+                  anything longer — matching-headings options are full
+                  sentences, so both the trigger and the option list
+                  need to wrap instead of clipping mid-word. */}
+              <SelectTrigger className="h-auto w-full min-h-8 whitespace-normal py-1.5 text-left *:data-[slot=select-value]:line-clamp-none *:data-[slot=select-value]:whitespace-normal">
                 <SelectValue placeholder="Choose a match" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="w-(--anchor-width) min-w-full">
                 {question.matchingRight.map((right) => (
-                  <SelectItem key={right} value={right}>
+                  <SelectItem key={right} value={right} className="[&>div]:whitespace-normal">
                     {right}
                   </SelectItem>
                 ))}
