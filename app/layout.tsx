@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import NextTopLoader from "nextjs-toploader";
 import { SITE_URL, SITE_NAME } from "@/lib/site-config";
 import { ThemeProvider } from "@/components/theme-provider";
 import "./globals.css";
@@ -43,6 +44,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="min-h-full flex flex-col">
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+          {/* Slim progress bar during page navigation — purely an event-
+              driven overlay (no loading.tsx/Suspense involved), so it
+              can't reintroduce the Cache Components hydration issue
+              loading.tsx caused earlier. */}
+          <NextTopLoader color="#4f46e5" height={3} showSpinner={false} shadow="0 0 8px #4f46e5" />
           {children}
         </ThemeProvider>
       </body>

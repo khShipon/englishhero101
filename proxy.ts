@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { updateSession } from "@/lib/supabase/proxy";
+import { isSupabaseAuthCookieName } from "@/lib/supabase/auth-cookie";
 
 // Optimistic checks only — reads the session refreshed by updateSession()
 // from the cookie. Role-based authorization (admin/editor for /admin) is
@@ -8,14 +9,34 @@ import { updateSession } from "@/lib/supabase/proxy";
 const PROTECTED_PREFIXES = ["/admin", "/profile", "/settings"];
 const GUEST_ONLY_PATHS = ["/login", "/register", "/forgot-password"];
 
+function isProtectedPath(path: string) {
+  return PROTECTED_PREFIXES.some((prefix) => path === prefix || path.startsWith(`${prefix}/`));
+}
+
+// A request carrying no Supabase auth cookie can't possibly be signed
+// in, so there's nothing for updateSession() to refresh — skipping it
+// avoids a network round trip to Supabase's auth server on every single
+// anonymous page view, which is most of this site's traffic (public
+// lesson/category pages).
+function hasSupabaseAuthCookie(request: NextRequest) {
+  return request.cookies.getAll().some((cookie) => isSupabaseAuthCookieName(cookie.name));
+}
+
 export async function proxy(request: NextRequest) {
-  const { response, user } = await updateSession(request);
   const path = request.nextUrl.pathname;
 
-  const isProtected = PROTECTED_PREFIXES.some(
-    (prefix) => path === prefix || path.startsWith(`${prefix}/`),
-  );
-  if (isProtected && !user) {
+  if (!hasSupabaseAuthCookie(request)) {
+    if (isProtectedPath(path)) {
+      const url = new URL("/login", request.url);
+      url.searchParams.set("redirectTo", path);
+      return NextResponse.redirect(url);
+    }
+    return NextResponse.next({ request });
+  }
+
+  const { response, user } = await updateSession(request);
+
+  if (isProtectedPath(path) && !user) {
     const url = new URL("/login", request.url);
     url.searchParams.set("redirectTo", path);
     return NextResponse.redirect(url);

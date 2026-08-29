@@ -1,7 +1,9 @@
 import "server-only";
 import { cache } from "react";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { isSupabaseAuthCookieName } from "@/lib/supabase/auth-cookie";
 
 export type ProfileRole = "admin" | "editor" | "student";
 
@@ -18,6 +20,16 @@ export type CurrentUser = {
 // from multiple components/layouts in the same render doesn't re-hit
 // the network or the database.
 export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
+  // Every public page renders the navbar, which calls this — for the
+  // (large) share of anonymous visitors there's no Supabase cookie at
+  // all, so there's nothing a network round trip to the auth server
+  // could confirm. Same short-circuit as proxy.ts's middleware check.
+  const cookieStore = await cookies();
+  const hasAuthCookie = cookieStore.getAll().some((cookie) => isSupabaseAuthCookieName(cookie.name));
+  if (!hasAuthCookie) {
+    return null;
+  }
+
   const supabase = await createClient();
   const {
     data: { user },
