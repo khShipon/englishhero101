@@ -257,7 +257,7 @@ export function ChoiceInput({
 }) {
   return (
     <ul className="flex flex-col gap-1.5">
-      {question.options.map((option) => {
+      {question.options.map((option, index) => {
         const checked = value.includes(option.id);
         const isCorrectOption = correctOptionIds?.includes(option.id) ?? false;
         const showState = correctOptionIds !== null;
@@ -271,6 +271,9 @@ export function ChoiceInput({
                 showState && checked && !isCorrectOption && "border-destructive bg-destructive/10",
               )}
             >
+              <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-muted text-[11px] font-semibold">
+                {String.fromCharCode(65 + index)}
+              </span>
               <input
                 type={multiple ? "checkbox" : "radio"}
                 name={multiple ? undefined : `question-${question.id}`}

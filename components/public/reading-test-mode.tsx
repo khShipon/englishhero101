@@ -64,7 +64,65 @@ type RenderItem =
       instructions: string;
       summaryBody: string;
       questions: SanitizedQuestion[];
-    };
+    }
+  | { kind: "tfng-group"; variant: "true_false" | "yes_no"; questions: SanitizedQuestion[] }
+  | { kind: "sentence-group"; instructions: string; questions: SanitizedQuestion[] };
+
+// True/False/Not Given (and Yes/No/Not Given) statements are stored as
+// ordinary multiple_choice questions with those exact three options —
+// there's no dedicated DB flag for "this is a TFNG question" — so the
+// option text itself is the signal. Detected this way instead of via
+// question_type because the seeded content uses "multiple_choice" for
+// these, not the "true_false" type the admin form also allows.
+const TRUE_FALSE_SET = ["true", "false", "not given"];
+const YES_NO_SET = ["yes", "no", "not given"];
+
+function tfngVariant(question: SanitizedQuestion): "true_false" | "yes_no" | null {
+  if (!CHOICE_TYPES.has(question.questionType) || question.questionType === "multiple_answer") return null;
+  if (question.options.length !== 3) return null;
+  const texts = question.options.map((o) => o.optionText.trim().toLowerCase()).sort();
+  if (JSON.stringify(texts) === JSON.stringify([...TRUE_FALSE_SET].sort())) return "true_false";
+  if (JSON.stringify(texts) === JSON.stringify([...YES_NO_SET].sort())) return "yes_no";
+  return null;
+}
+
+const TFNG_LEGEND: Record<"true_false" | "yes_no", { instructions: string; legend: [string, string][] }> = {
+  true_false: {
+    instructions: "Do the following statements agree with the information given in the passage?",
+    legend: [
+      ["TRUE", "if the statement agrees with the information"],
+      ["FALSE", "if the statement contradicts the information"],
+      ["NOT GIVEN", "if there is no information on this"],
+    ],
+  },
+  yes_no: {
+    instructions: "Do the following statements agree with the views of the writer?",
+    legend: [
+      ["YES", "if the statement agrees with the views of the writer"],
+      ["NO", "if the statement contradicts the views of the writer"],
+      ["NOT GIVEN", "if it is impossible to say what the writer thinks about this"],
+    ],
+  },
+};
+
+// Individual "Complete the sentences below" fill-in-blank questions
+// carry the same word-limit instructions in every row (only the
+// target sentence differs) — same transcription shape as the summary
+// questions, so it's detected and deduped the same way. Any fill-blank
+// text containing a run of dots is treated as a blank, even without
+// the recognised instructions prefix, so the blank always renders
+// inline in the sentence rather than as a separate box below it.
+const SENTENCE_COMPLETION_RE = /^Complete the sentences? below\.\s*(Use[^.]*\.)\s*([\s\S]+)$/i;
+
+function matchSentenceCompletion(question: SanitizedQuestion) {
+  if (!TEXT_TYPES.has(question.questionType)) return null;
+  if (!/\.{3,}/.test(question.questionText)) return null;
+  const match = question.questionText.match(SENTENCE_COMPLETION_RE);
+  if (match) {
+    return { instructions: match[1].trim(), sentence: match[2].trim() };
+  }
+  return { instructions: "", sentence: question.questionText.trim() };
+}
 
 function matchSummaryQuestion(question: SanitizedQuestion) {
   if (question.questionType !== "fill_in_blank") return null;
@@ -81,31 +139,60 @@ function buildRenderItems(questions: SanitizedQuestion[]): RenderItem[] {
   const items: RenderItem[] = [];
   let i = 0;
   while (i < questions.length) {
-    const parsed = matchSummaryQuestion(questions[i]);
-    if (!parsed) {
-      items.push({ kind: "single", question: questions[i] });
-      i++;
+    const summaryParsed = matchSummaryQuestion(questions[i]);
+    if (summaryParsed) {
+      const cluster = [questions[i]];
+      let j = i + 1;
+      while (j < questions.length) {
+        const nextParsed = matchSummaryQuestion(questions[j]);
+        if (!nextParsed || nextParsed.summaryBody !== summaryParsed.summaryBody) break;
+        cluster.push(questions[j]);
+        j++;
+      }
+      if (cluster.length > 1) {
+        items.push({
+          kind: "summary",
+          instructions: summaryParsed.instructions,
+          summaryBody: summaryParsed.summaryBody,
+          questions: cluster,
+        });
+      } else {
+        items.push({ kind: "single", question: questions[i] });
+      }
+      i = j;
       continue;
     }
-    const cluster = [questions[i]];
-    let j = i + 1;
-    while (j < questions.length) {
-      const nextParsed = matchSummaryQuestion(questions[j]);
-      if (!nextParsed || nextParsed.summaryBody !== parsed.summaryBody) break;
-      cluster.push(questions[j]);
-      j++;
+
+    const variant = tfngVariant(questions[i]);
+    if (variant) {
+      const cluster = [questions[i]];
+      let j = i + 1;
+      while (j < questions.length && tfngVariant(questions[j]) === variant) {
+        cluster.push(questions[j]);
+        j++;
+      }
+      items.push({ kind: "tfng-group", variant, questions: cluster });
+      i = j;
+      continue;
     }
-    if (cluster.length > 1) {
-      items.push({
-        kind: "summary",
-        instructions: parsed.instructions,
-        summaryBody: parsed.summaryBody,
-        questions: cluster,
-      });
-    } else {
-      items.push({ kind: "single", question: questions[i] });
+
+    const sentenceParsed = matchSentenceCompletion(questions[i]);
+    if (sentenceParsed) {
+      const cluster = [questions[i]];
+      let j = i + 1;
+      while (j < questions.length) {
+        const nextParsed = matchSentenceCompletion(questions[j]);
+        if (!nextParsed || nextParsed.instructions !== sentenceParsed.instructions) break;
+        cluster.push(questions[j]);
+        j++;
+      }
+      items.push({ kind: "sentence-group", instructions: sentenceParsed.instructions, questions: cluster });
+      i = j;
+      continue;
     }
-    i = j;
+
+    items.push({ kind: "single", question: questions[i] });
+    i++;
   }
   return items;
 }
@@ -208,6 +295,152 @@ function SummaryCluster({
           })}
         </div>
       )}
+    </div>
+  );
+}
+
+// Renders consecutive "Complete the sentences below" questions as a
+// shared instructions line followed by each target sentence with its
+// blank as an inline input — mirrors SummaryCluster's approach but
+// each row has its own sentence rather than a shared paragraph.
+function SentenceCompletionGroup({
+  instructions,
+  questions,
+  answers,
+  disabled,
+  onChange,
+  resultByQuestionId,
+  setQuestionRef,
+  allQuestions,
+}: {
+  instructions: string;
+  questions: SanitizedQuestion[];
+  answers: Record<string, AnswerState>;
+  disabled: boolean;
+  onChange: (questionId: string, patch: AnswerState) => void;
+  resultByQuestionId: Map<string, NonNullable<QuizResult["questions"][number]>> | null;
+  setQuestionRef: (questionId: string, el: HTMLElement | null) => void;
+  allQuestions: SanitizedQuestion[];
+}) {
+  return (
+    <div className="rounded-md border p-3">
+      {instructions && <p className="mb-2 text-sm font-medium">{instructions}</p>}
+      <div className="flex flex-col gap-2.5">
+        {questions.map((question) => {
+          const parsed = matchSentenceCompletion(question)!;
+          const parts = parsed.sentence.split(/\.{3,}/);
+          const graded = resultByQuestionId?.get(question.id) ?? null;
+          const label = questionLabel(question, allQuestions.indexOf(question), allQuestions);
+          return (
+            <p
+              key={question.id}
+              ref={(el) => setQuestionRef(question.id, el)}
+              className="text-sm leading-relaxed"
+            >
+              <span className="mr-1.5 inline-flex size-5 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
+                {label}
+              </span>
+              {parts[0]}
+              <Input
+                value={answers[question.id]?.text ?? ""}
+                disabled={disabled}
+                onChange={(e) => onChange(question.id, { text: e.target.value })}
+                className={cn(
+                  "mx-1 inline-block h-7 w-32 px-1.5 py-0.5 align-baseline text-sm",
+                  graded && (graded.correct ? "border-emerald-600" : "border-destructive"),
+                )}
+              />
+              {parts[1] ?? ""}
+              {graded && !graded.correct && graded.correctText && (
+                <span className="ml-1 text-xs whitespace-nowrap text-muted-foreground">
+                  ({graded.correctText})
+                </span>
+              )}
+              {graded?.explanation && (
+                <span className="mt-1 block text-xs text-muted-foreground">{graded.explanation}</span>
+              )}
+            </p>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// Renders a run of True/False/Not Given (or Yes/No/Not Given)
+// statements as a compact dropdown-per-row list with a shared
+// instructions/legend block above — the dense format real IELTS CD
+// tests use, instead of a full radio-button list per statement.
+function TfngGroup({
+  variant,
+  questions,
+  answers,
+  disabled,
+  onChange,
+  resultByQuestionId,
+  setQuestionRef,
+  allQuestions,
+}: {
+  variant: "true_false" | "yes_no";
+  questions: SanitizedQuestion[];
+  answers: Record<string, AnswerState>;
+  disabled: boolean;
+  onChange: (questionId: string, patch: AnswerState) => void;
+  resultByQuestionId: Map<string, NonNullable<QuizResult["questions"][number]>> | null;
+  setQuestionRef: (questionId: string, el: HTMLElement | null) => void;
+  allQuestions: SanitizedQuestion[];
+}) {
+  const { instructions, legend } = TFNG_LEGEND[variant];
+  return (
+    <div className="rounded-md border p-3">
+      <p className="mb-2 text-sm font-medium">{instructions}</p>
+      <div className="mb-3 flex flex-col gap-0.5 text-xs text-muted-foreground">
+        {legend.map(([term, def]) => (
+          <p key={term}>
+            <span className="font-semibold text-foreground">{term}.</span> {def}
+          </p>
+        ))}
+      </div>
+      <div className="flex flex-col gap-2">
+        {questions.map((question) => {
+          const graded = resultByQuestionId?.get(question.id) ?? null;
+          const label = questionLabel(question, allQuestions.indexOf(question), allQuestions);
+          const selectedId = answers[question.id]?.selectedOptionIds?.[0] ?? "";
+          return (
+            <div key={question.id} ref={(el) => setQuestionRef(question.id, el)} className="flex flex-col gap-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="inline-flex size-5 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold">
+                  {label}
+                </span>
+                <Select
+                  value={selectedId}
+                  onValueChange={(value) => onChange(question.id, { selectedOptionIds: value ? [value] : [] })}
+                  disabled={disabled}
+                >
+                  <SelectTrigger
+                    className={cn(
+                      "h-8 w-36 shrink-0",
+                      graded && (graded.correct ? "border-emerald-600" : "border-destructive"),
+                    )}
+                  >
+                    <SelectValue placeholder="Choose" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {question.options.map((option) => (
+                      <SelectItem key={option.id} value={option.id}>
+                        {option.optionText}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <span className="flex-1 text-sm">{question.questionText}</span>
+                {graded && <GradeBadge graded={graded} />}
+              </div>
+              {graded?.explanation && <p className="pl-7 text-xs text-muted-foreground">{graded.explanation}</p>}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -411,6 +644,38 @@ export function ReadingTestMode({
                     onChange={updateAnswer}
                     resultByQuestionId={resultByQuestionId}
                     setQuestionRef={setQuestionRef}
+                  />
+                );
+              }
+
+              if (item.kind === "tfng-group") {
+                return (
+                  <TfngGroup
+                    key={item.questions[0].id}
+                    variant={item.variant}
+                    questions={item.questions}
+                    answers={answers}
+                    disabled={!!result || readOnly}
+                    onChange={updateAnswer}
+                    resultByQuestionId={resultByQuestionId}
+                    setQuestionRef={setQuestionRef}
+                    allQuestions={questions}
+                  />
+                );
+              }
+
+              if (item.kind === "sentence-group") {
+                return (
+                  <SentenceCompletionGroup
+                    key={item.questions[0].id}
+                    instructions={item.instructions}
+                    questions={item.questions}
+                    answers={answers}
+                    disabled={!!result || readOnly}
+                    onChange={updateAnswer}
+                    resultByQuestionId={resultByQuestionId}
+                    setQuestionRef={setQuestionRef}
+                    allQuestions={questions}
                   />
                 );
               }
