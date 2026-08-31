@@ -4,6 +4,7 @@ import { getChildren } from "@/lib/queries/content";
 import { getCurrentUser } from "@/lib/auth/dal";
 import { SearchBox } from "@/components/public/search-box";
 import { MobileNav } from "@/components/public/mobile-nav";
+import { ProfileMenu } from "@/components/public/profile-menu";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { buttonVariants } from "@/components/ui/button";
 import { CATEGORY_ICONS, DEFAULT_CATEGORY_ICON } from "@/lib/content-icons";
@@ -16,12 +17,12 @@ import { cn } from "@/lib/utils";
 // the rest of the page can still be cached/prerendered.
 async function AuthLink() {
   const user = await getCurrentUser();
+  if (user) {
+    return <ProfileMenu fullName={user.fullName} email={user.email} />;
+  }
   return (
-    <Link
-      href={user ? "/profile" : "/login"}
-      className={cn(buttonVariants({ variant: "outline", size: "sm" }), "shrink-0")}
-    >
-      <User /> {user ? "Profile" : "Login"}
+    <Link href="/login" className={cn(buttonVariants({ variant: "outline", size: "sm" }), "shrink-0")}>
+      <User /> Login
     </Link>
   );
 }

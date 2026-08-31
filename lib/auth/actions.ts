@@ -101,13 +101,42 @@ export async function register(
     return { error: error.message, values: { fullName, email } };
   }
 
+  // Normal path once Supabase Auth's "Confirm email" setting is off:
+  // signUp already returns a live session, so the user is signed in
+  // immediately — no email click required. This only falls back to
+  // the "check your email" message if that setting is ever re-enabled
+  // on the Supabase project (a dashboard/config setting, not something
+  // this code controls) and Supabase withholds the session instead.
   if (!data.session) {
     return {
       success: "Account created. Check your email to confirm your address before logging in.",
     };
   }
 
-  redirect("/profile");
+  redirect("/profile?welcome=1");
+}
+
+// Server-side signInWithOAuth doesn't redirect itself (there's no
+// window here) — it just returns the provider's consent-screen URL,
+// which this action then redirects the browser to. The user comes
+// back through /auth/confirm's `code` branch (the same PKCE exchange
+// used for email confirmation links), so no separate OAuth callback
+// route is needed.
+export async function signInWithGoogle() {
+  const supabase = await createClient();
+  const origin = await siteOrigin();
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: "google",
+    options: {
+      redirectTo: `${origin}/auth/confirm?next=/profile`,
+    },
+  });
+
+  if (error || !data.url) {
+    redirect("/auth/auth-code-error");
+  }
+
+  redirect(data.url);
 }
 
 export async function requestPasswordReset(

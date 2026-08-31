@@ -4,6 +4,7 @@ import { requireUser } from "@/lib/auth/dal";
 import { getContinueLearning, getCompletedLessons } from "@/lib/queries/progress";
 import { getUserBookmarks } from "@/lib/queries/bookmarks";
 import { getSpokenCourseProgress } from "@/lib/queries/course-progress";
+import { WelcomeBanner } from "@/components/public/welcome-banner";
 import {
   Card,
   CardContent,
@@ -21,8 +22,12 @@ export const metadata: Metadata = { title: "Your profile — EnglishHero101" };
 // being carved up with Suspense boundaries for no benefit.
 export const instant = false;
 
-export default async function ProfilePage() {
-  const user = await requireUser();
+export default async function ProfilePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ welcome?: string }>;
+}) {
+  const [user, { welcome }] = await Promise.all([requireUser(), searchParams]);
 
   const [continueLearning, bookmarks, completed, courseProgress] = await Promise.all([
     getContinueLearning(),
@@ -33,6 +38,7 @@ export default async function ProfilePage() {
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 px-4 py-12">
+      {welcome === "1" && <WelcomeBanner />}
       <div className="flex items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">

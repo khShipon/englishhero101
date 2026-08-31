@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useActionState } from "react";
 import { login } from "@/lib/auth/actions";
+import { GoogleSignInButton } from "@/components/auth/google-sign-in-button";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -25,6 +26,14 @@ export function LoginForm({ redirectTo }: { redirectTo?: string }) {
         <CardTitle>Log in</CardTitle>
         <CardDescription>Welcome back. Enter your details to continue.</CardDescription>
       </CardHeader>
+      <CardContent className="pb-0">
+        <GoogleSignInButton label="Continue with Google" />
+        <div className="my-4 flex items-center gap-3 text-xs text-muted-foreground">
+          <div className="h-px flex-1 bg-border" />
+          OR
+          <div className="h-px flex-1 bg-border" />
+        </div>
+      </CardContent>
       <form action={formAction}>
         <CardContent className="flex flex-col gap-4">
           {state?.error && (
