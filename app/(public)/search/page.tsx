@@ -5,6 +5,7 @@ import { getBreadcrumbs } from "@/lib/queries/content";
 import { SearchBox } from "@/components/public/search-box";
 import { LessonCard } from "@/components/public/lesson-card";
 import { VocabularyCard } from "@/components/public/vocabulary-card";
+import { QuestionSetCard } from "@/components/public/question-set-card";
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 
 export const metadata: Metadata = {
@@ -45,8 +46,11 @@ export default async function SearchPage({
 }) {
   const { q } = await searchParams;
   const query = q ?? "";
-  const results = query.trim() ? await searchSite(query) : { nodes: [], lessons: [], vocabulary: [] };
-  const hasResults = results.nodes.length + results.lessons.length + results.vocabulary.length > 0;
+  const results = query.trim()
+    ? await searchSite(query)
+    : { nodes: [], lessons: [], vocabulary: [], questionSets: [] };
+  const hasResults =
+    results.nodes.length + results.lessons.length + results.vocabulary.length + results.questionSets.length > 0;
 
   return (
     <div className="mx-auto w-full max-w-4xl px-4 py-10">
@@ -87,6 +91,17 @@ export default async function SearchPage({
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             {results.vocabulary.map((entry) => (
               <VocabularyCard key={entry.id} entry={entry} />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {results.questionSets.length > 0 && (
+        <section className="mt-8">
+          <h2 className="mb-3 text-lg font-semibold tracking-tight">Question Banks</h2>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            {results.questionSets.map((set) => (
+              <QuestionSetCard key={set.id} questionSet={set} />
             ))}
           </div>
         </section>

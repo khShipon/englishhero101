@@ -13,7 +13,7 @@ export function QuestionSetCard({ questionSet }: { questionSet: QuestionSet }) {
             {questionSet.title}
           </CardTitle>
           <CardDescription>
-            {[questionSet.examType, questionSet.subject, questionSet.year]
+            {[questionSet.examType, questionSet.board, questionSet.subject, questionSet.year]
               .filter(Boolean)
               .join(" · ") || "Practice questions"}
           </CardDescription>

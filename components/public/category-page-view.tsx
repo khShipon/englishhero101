@@ -8,7 +8,17 @@ import { CategoryCard } from "@/components/public/category-card";
 import { LessonCard } from "@/components/public/lesson-card";
 import { QuestionSetCard } from "@/components/public/question-set-card";
 import { VocabularyCard } from "@/components/public/vocabulary-card";
+import { SubjectExplorer } from "@/components/public/subject-explorer";
 import { BookOpen, ClipboardList, LayoutGrid, Languages, type LucideIcon } from "lucide-react";
+
+// SSC English / HSC English are wide enough (6 sections, ~20-30 topics
+// under 1st/2nd Paper) to warrant a paper -> topic quick-jump navigator
+// above the generic Browse grid — every other category just gets the
+// grid, so this is a small opt-in list rather than a new node_type.
+const SUBJECT_EXPLORER_SLUGS: Record<string, "SSC" | "HSC"> = {
+  "ssc-english": "SSC",
+  "hsc-english": "HSC",
+};
 
 function SectionHeading({ icon: Icon, children }: { icon: LucideIcon; children: React.ReactNode }) {
   return (
@@ -41,6 +51,17 @@ export async function CategoryPageView({
   ]);
 
   const publishedChildren = children.filter((child) => child.isPublished);
+  const examType = SUBJECT_EXPLORER_SLUGS[node.slug];
+  const sectionChildren = examType
+    ? Object.fromEntries(
+        await Promise.all(
+          publishedChildren.map(async (section) => [
+            section.id,
+            (await getChildren(section.id)).filter((child) => child.isPublished),
+          ]),
+        ),
+      )
+    : {};
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-10">
@@ -48,6 +69,15 @@ export async function CategoryPageView({
       <h1 className="mt-3 text-3xl font-semibold tracking-tight">{node.title}</h1>
       {node.description && (
         <p className="mt-2 max-w-2xl text-muted-foreground">{node.description}</p>
+      )}
+
+      {examType && (
+        <SubjectExplorer
+          basePath={basePath}
+          sections={publishedChildren}
+          sectionChildren={sectionChildren}
+          examType={examType}
+        />
       )}
 
       {publishedChildren.length > 0 && (

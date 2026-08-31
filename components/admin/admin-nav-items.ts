@@ -6,6 +6,7 @@ import {
   Users,
   Settings,
   GraduationCap,
+  School,
 } from "lucide-react";
 
 export const ADMIN_NAV_ITEMS = [
@@ -14,6 +15,13 @@ export const ADMIN_NAV_ITEMS = [
     href: "/admin/ielts",
     label: "IELTS",
     icon: GraduationCap,
+    exact: false,
+    adminOnly: false,
+  },
+  {
+    href: "/admin/ssc-hsc",
+    label: "SSC / HSC",
+    icon: School,
     exact: false,
     adminOnly: false,
   },

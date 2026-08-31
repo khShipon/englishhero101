@@ -180,6 +180,86 @@ export async function getRecentPublishedQuestionSets(limit = 6): Promise<Questio
   return (data ?? []).map(mapQuestionSet);
 }
 
+export type QuestionSetSearchFilters = {
+  examType?: string;
+  board?: string;
+  subject?: string;
+  year?: number;
+  query?: string;
+  limit?: number;
+};
+
+// Backs the public /question-banks browse page and its board/year/
+// subject filters — a board exam paper is just a question set with
+// exam_type/board/subject/year filled in, so this is plain conditional
+// filtering, no new schema. Filters are exact-match (board/exam type/
+// year are picked from a fixed list on the page, not free text) except
+// `query`, which is a title search like the other public queries here.
+export async function searchPublishedQuestionSets(
+  filters: QuestionSetSearchFilters = {},
+): Promise<QuestionSet[]> {
+  "use cache";
+  cacheLife("hours");
+  cacheTag(QUESTION_SETS_TAG);
+
+  const supabase = createPublicClient();
+  let queryBuilder = supabase
+    .from("question_sets")
+    .select(QUESTION_SET_COLUMNS)
+    .eq("is_published", true);
+
+  if (filters.examType) queryBuilder = queryBuilder.eq("exam_type", filters.examType);
+  if (filters.board) queryBuilder = queryBuilder.eq("board", filters.board);
+  if (filters.subject) queryBuilder = queryBuilder.eq("subject", filters.subject);
+  if (filters.year) queryBuilder = queryBuilder.eq("year", filters.year);
+  if (filters.query?.trim()) queryBuilder = queryBuilder.ilike("title", `%${filters.query.trim()}%`);
+
+  const { data, error } = await queryBuilder
+    .order("year", { ascending: false })
+    .order("created_at", { ascending: false })
+    .limit(filters.limit ?? 60);
+
+  if (error) throw error;
+  return (data ?? []).map(mapQuestionSet);
+}
+
+export type QuestionBankFilterOptions = {
+  examTypes: string[];
+  boards: string[];
+  subjects: string[];
+  years: number[];
+};
+
+// Distinct filter values actually present in published question sets
+// — drives the filter dropdowns on /question-banks so options never
+// go stale against a hardcoded list as admins add more board papers.
+export async function getQuestionBankFilterOptions(): Promise<QuestionBankFilterOptions> {
+  "use cache";
+  cacheLife("hours");
+  cacheTag(QUESTION_SETS_TAG);
+
+  const supabase = createPublicClient();
+  const { data, error } = await supabase
+    .from("question_sets")
+    .select("exam_type, board, subject, year")
+    .eq("is_published", true);
+
+  if (error) throw error;
+
+  const rows = (data ?? []) as Pick<QuestionSetRow, "exam_type" | "board" | "subject" | "year">[];
+  const uniqueSorted = (values: (string | null)[]) =>
+    Array.from(new Set(values.filter((v): v is string => !!v))).sort();
+
+  return {
+    examTypes: uniqueSorted(rows.map((r) => r.exam_type)),
+    boards: uniqueSorted(rows.map((r) => r.board)),
+    subjects: uniqueSorted(rows.map((r) => r.subject)),
+    years: Array.from(new Set(rows.map((r) => r.year).filter((y): y is number => !!y))).sort(
+      (a, b) => b - a,
+    ),
+  };
+}
+
 // Admin-shared lookup (drafts included, relies on the caller's own RLS
 // access) — used by both the admin editor and, after an explicit
 // is_published check, by the public page's generateMetadata.

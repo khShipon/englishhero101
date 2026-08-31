@@ -8,9 +8,9 @@ export const metadata: Metadata = { title: "New content node — Admin — Engli
 export default async function NewContentNodePage({
   searchParams,
 }: {
-  searchParams: Promise<{ parent?: string }>;
+  searchParams: Promise<{ parent?: string; type?: string }>;
 }) {
-  const { parent } = await searchParams;
+  const { parent, type } = await searchParams;
   const tree = await getContentTree();
   const parentOptions = flattenParentOptions(tree);
 
@@ -18,7 +18,7 @@ export default async function NewContentNodePage({
     <ContentNodeForm
       mode="create"
       parentOptions={parentOptions}
-      defaultValues={parent ? { parentId: parent } : undefined}
+      defaultValues={parent || type ? { parentId: parent, nodeType: type } : undefined}
     />
   );
 }

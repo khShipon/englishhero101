@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { SearchBox } from "@/components/public/search-box";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { CATEGORY_ICONS, DEFAULT_CATEGORY_ICON } from "@/lib/content-icons";
-import { GraduationCap, Home, Menu, User } from "lucide-react";
+import { ClipboardList, GraduationCap, Home, Menu, User } from "lucide-react";
 
 export function MobileNav({ categories }: { categories: ContentNode[] }) {
   const [open, setOpen] = useState(false);
@@ -42,6 +42,17 @@ export function MobileNav({ categories }: { categories: ContentNode[] }) {
             }
           >
             <Home className="size-4 text-muted-foreground" /> Home
+          </SheetClose>
+          <SheetClose
+            nativeButton={false}
+            render={
+              <Link
+                href="/question-banks"
+                className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-sm font-medium hover:bg-muted"
+              />
+            }
+          >
+            <ClipboardList className="size-4 text-muted-foreground" /> Question Banks
           </SheetClose>
           {categories.map((category) => {
             const Icon = CATEGORY_ICONS[category.slug] ?? DEFAULT_CATEGORY_ICON;

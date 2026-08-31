@@ -17,6 +17,26 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 
+const EXAM_TYPE_SUGGESTIONS = ["SSC", "HSC", "IELTS"];
+const SUBJECT_SUGGESTIONS = ["English 1st Paper", "English 2nd Paper"];
+// The 8 general education boards plus Madrasah and Technical — still
+// free text (not a hard enum) so nothing already saved ever becomes
+// invalid, this just keeps new entries consistent enough for the
+// board/year filters on /question-banks to actually work.
+const BOARD_SUGGESTIONS = [
+  "Dhaka Board",
+  "Rajshahi Board",
+  "Chattogram Board",
+  "Cumilla Board",
+  "Barishal Board",
+  "Jashore Board",
+  "Sylhet Board",
+  "Dinajpur Board",
+  "Mymensingh Board",
+  "Madrasah Board",
+  "Technical Board",
+];
+
 export function QuestionSetForm({
   mode,
   questionSetId,
@@ -86,20 +106,41 @@ export function QuestionSetForm({
               <Input
                 id="examType"
                 name="examType"
+                list="exam-type-suggestions"
                 defaultValue={defaultValues?.examType ?? ""}
                 placeholder="e.g. SSC, HSC, IELTS"
               />
+              <datalist id="exam-type-suggestions">
+                {EXAM_TYPE_SUGGESTIONS.map((type) => (
+                  <option key={type} value={type} />
+                ))}
+              </datalist>
             </div>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="subject">Subject</Label>
-              <Input id="subject" name="subject" defaultValue={defaultValues?.subject ?? ""} />
+              <Input
+                id="subject"
+                name="subject"
+                list="subject-suggestions"
+                defaultValue={defaultValues?.subject ?? ""}
+              />
+              <datalist id="subject-suggestions">
+                {SUBJECT_SUGGESTIONS.map((subject) => (
+                  <option key={subject} value={subject} />
+                ))}
+              </datalist>
             </div>
           </div>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="board">Board</Label>
-              <Input id="board" name="board" defaultValue={defaultValues?.board ?? ""} />
+              <Input id="board" name="board" list="board-suggestions" defaultValue={defaultValues?.board ?? ""} />
+              <datalist id="board-suggestions">
+                {BOARD_SUGGESTIONS.map((board) => (
+                  <option key={board} value={board} />
+                ))}
+              </datalist>
             </div>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="year">Year</Label>

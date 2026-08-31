@@ -7,7 +7,7 @@ import { MobileNav } from "@/components/public/mobile-nav";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { buttonVariants } from "@/components/ui/button";
 import { CATEGORY_ICONS, DEFAULT_CATEGORY_ICON } from "@/lib/content-icons";
-import { GraduationCap, Home, User } from "lucide-react";
+import { ClipboardList, GraduationCap, Home, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // Reads the session cookie, so it's the one part of the navbar that
@@ -62,6 +62,12 @@ export async function Navbar() {
             className="flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
           >
             <Home className="size-3.5" /> Home
+          </Link>
+          <Link
+            href="/question-banks"
+            className="flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
+          >
+            <ClipboardList className="size-3.5" /> Question Banks
           </Link>
           {publishedCategories.map((category) => {
             const Icon = CATEGORY_ICONS[category.slug] ?? DEFAULT_CATEGORY_ICON;
