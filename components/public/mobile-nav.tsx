@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import type { ContentNode } from "@/types/content";
+import type { ContentTreeNode } from "@/types/content";
 import {
   Sheet,
   SheetClose,
@@ -16,7 +16,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { CATEGORY_ICONS, DEFAULT_CATEGORY_ICON } from "@/lib/content-icons";
 import { ClipboardList, GraduationCap, Home, Menu, User } from "lucide-react";
 
-export function MobileNav({ categories }: { categories: ContentNode[] }) {
+export function MobileNav({ categories }: { categories: ContentTreeNode[] }) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -56,19 +56,42 @@ export function MobileNav({ categories }: { categories: ContentNode[] }) {
           </SheetClose>
           {categories.map((category) => {
             const Icon = CATEGORY_ICONS[category.slug] ?? DEFAULT_CATEGORY_ICON;
+            const children = category.children.filter((child) => child.isPublished);
             return (
-              <SheetClose
-                key={category.id}
-                nativeButton={false}
-                render={
-                  <Link
-                    href={`/${category.slug}`}
-                    className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-sm font-medium hover:bg-muted"
-                  />
-                }
-              >
-                <Icon className="size-4 text-muted-foreground" /> {category.title}
-              </SheetClose>
+              <div key={category.id}>
+                <SheetClose
+                  nativeButton={false}
+                  render={
+                    <Link
+                      href={`/${category.slug}`}
+                      className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-sm font-medium hover:bg-muted"
+                    />
+                  }
+                >
+                  <Icon className="size-4 text-muted-foreground" /> {category.title}
+                </SheetClose>
+                {children.length > 0 && (
+                  <div className="ml-5 flex flex-col gap-0.5 border-l pl-3.5">
+                    {children.map((child) => {
+                      const ChildIcon = CATEGORY_ICONS[child.slug] ?? DEFAULT_CATEGORY_ICON;
+                      return (
+                        <SheetClose
+                          key={child.id}
+                          nativeButton={false}
+                          render={
+                            <Link
+                              href={`/${category.slug}/${child.slug}`}
+                              className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-muted-foreground hover:bg-muted hover:text-foreground"
+                            />
+                          }
+                        >
+                          <ChildIcon className="size-3.5" /> {child.title}
+                        </SheetClose>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             );
           })}
           <SheetClose
