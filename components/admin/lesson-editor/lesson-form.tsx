@@ -14,6 +14,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 
+// Base UI's Select.Value shows the raw stored value unless Select.Root
+// is given an items map to resolve labels from — see components/ui/select.tsx.
+const DIFFICULTY_ITEMS = [
+  { value: "none", label: "Not set" },
+  { value: "beginner", label: "Beginner" },
+  { value: "intermediate", label: "Intermediate" },
+  { value: "advanced", label: "Advanced" },
+];
+
 export function LessonForm({
   mode,
   lessonId,
@@ -63,7 +72,11 @@ export function LessonForm({
 
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="nodeId">Parent category</Label>
-            <Select name="nodeId" defaultValue={defaultValues?.nodeId ?? defaultNodeId}>
+            <Select
+              name="nodeId"
+              defaultValue={defaultValues?.nodeId ?? defaultNodeId}
+              items={parentOptions.map((option) => ({ value: option.id, label: option.label }))}
+            >
               <SelectTrigger id="nodeId" className="w-full">
                 <SelectValue placeholder="Choose a category" />
               </SelectTrigger>
@@ -101,7 +114,11 @@ export function LessonForm({
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="difficulty">Difficulty</Label>
-              <Select name="difficulty" defaultValue={defaultValues?.difficulty ?? "none"}>
+              <Select
+                name="difficulty"
+                defaultValue={defaultValues?.difficulty ?? "none"}
+                items={DIFFICULTY_ITEMS}
+              >
                 <SelectTrigger id="difficulty" className="w-full">
                   <SelectValue />
                 </SelectTrigger>

@@ -31,6 +31,15 @@ const QUESTION_TYPE_LABELS: Record<QuestionType, string> = {
   written_answer: "Written answer",
 };
 
+// Base UI's Select.Value shows the raw stored value unless Select.Root
+// is given an items map to resolve labels from — see components/ui/select.tsx.
+const DIFFICULTY_ITEMS = [
+  { value: "none", label: "Not set" },
+  { value: "beginner", label: "Beginner" },
+  { value: "intermediate", label: "Intermediate" },
+  { value: "advanced", label: "Advanced" },
+];
+
 function defaultOptionsFor(type: QuestionType): OptionValue[] {
   if (type === "true_false") {
     return [
@@ -164,6 +173,10 @@ export function QuestionForm({
               <Select
                 value={ieltsPreset || "none"}
                 onValueChange={(value) => handlePresetChange(!value || value === "none" ? "" : value)}
+                items={[
+                  { value: "none", label: "Custom (use the question type below)" },
+                  ...IELTS_READING_QUESTION_TYPES.map((type) => ({ value: type.key, label: type.label })),
+                ]}
               >
                 <SelectTrigger id="ieltsPreset" className="w-full bg-background">
                   <SelectValue placeholder="Choose to auto-fill defaults" />
@@ -189,6 +202,7 @@ export function QuestionForm({
               name="questionType"
               value={questionType}
               onValueChange={(value) => handleTypeChange(value as QuestionType)}
+              items={QUESTION_TYPES.map((type) => ({ value: type, label: QUESTION_TYPE_LABELS[type] }))}
             >
               <SelectTrigger id="questionType" className="w-full">
                 <SelectValue />
@@ -209,6 +223,13 @@ export function QuestionForm({
               <Select
                 name="passageNumber"
                 defaultValue={defaultPassageNumber ? String(defaultPassageNumber) : "none"}
+                items={[
+                  { value: "none", label: "Not linked to a passage" },
+                  ...passages.map((passage) => ({
+                    value: String(passage.passageNumber),
+                    label: `Passage ${passage.passageNumber}: ${passage.title}`,
+                  })),
+                ]}
               >
                 <SelectTrigger id="passageNumber" className="w-full">
                   <SelectValue />
@@ -318,7 +339,11 @@ export function QuestionForm({
             </div>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="difficulty">Difficulty</Label>
-              <Select name="difficulty" defaultValue={defaultValues?.difficulty ?? "none"}>
+              <Select
+                name="difficulty"
+                defaultValue={defaultValues?.difficulty ?? "none"}
+                items={DIFFICULTY_ITEMS}
+              >
                 <SelectTrigger id="difficulty" className="w-full">
                   <SelectValue />
                 </SelectTrigger>
