@@ -3,12 +3,13 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getQuestionSetById, getQuestionsBySet } from "@/lib/queries/question-banks";
 import { getReadingPassagesByLessonAdmin } from "@/lib/queries/reading-passages";
+import { toggleQuestionSetPublish } from "@/lib/admin/question-bank-actions";
 import { QuestionsList } from "@/components/admin/question-banks/questions-list";
 import { QuestionsByPassage } from "@/components/admin/question-banks/questions-by-passage";
 import { Badge } from "@/components/ui/badge";
-import { buttonVariants } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Plus, Upload } from "lucide-react";
+import { Eye, EyeOff, Plus, Upload } from "lucide-react";
 
 export const metadata: Metadata = { title: "Question set — Admin — EnglishHero101" };
 
@@ -52,6 +53,21 @@ export default async function QuestionSetPage({
           )}
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <form action={toggleQuestionSetPublish}>
+            <input type="hidden" name="id" value={questionSet.id} />
+            <input type="hidden" name="nextPublished" value={(!questionSet.isPublished).toString()} />
+            <Button type="submit" variant="outline">
+              {questionSet.isPublished ? (
+                <>
+                  <EyeOff /> Unpublish
+                </>
+              ) : (
+                <>
+                  <Eye /> Publish
+                </>
+              )}
+            </Button>
+          </form>
           <Link
             href={`/admin/question-banks/${questionSet.id}/edit`}
             className={buttonVariants({ variant: "outline" })}

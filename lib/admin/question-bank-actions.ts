@@ -188,5 +188,6 @@ export async function toggleQuestionSetPublish(formData: FormData) {
   }
 
   revalidatePath("/admin/question-banks");
+  revalidatePath(`/admin/question-banks/${id}`);
   updateTag(QUESTION_SETS_TAG);
 }
