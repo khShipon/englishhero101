@@ -95,6 +95,24 @@ export async function importReadingTest(
     return { error: "That isn't valid JSON — check for a missing comma or bracket." };
   }
 
+  // Common failure mode when an AI tool re-escapes its own output: the
+  // top-level object parses fine, but "lesson"/"passages" (or fields
+  // inside them) come through as JSON *text* instead of a real
+  // object/array — every non-string field then fails validation while
+  // plain string fields like title happen to still look fine. Give a
+  // specific, actionable error instead of a wall of "Invalid input".
+  if (raw && typeof raw === "object") {
+    const record = raw as Record<string, unknown>;
+    if (typeof record.lesson === "string" || typeof record.passages === "string") {
+      return {
+        error:
+          'Some fields came through as JSON text instead of real JSON (e.g. "lesson" is a string, not an object). ' +
+          "This usually happens when the AI tool double-encoded its output — ask it to return raw JSON only, " +
+          "with no escaping and no surrounding quotes, then paste that directly.",
+      };
+    }
+  }
+
   const parsed = readingTestImportSchema.safeParse(raw);
   if (!parsed.success) {
     return {
