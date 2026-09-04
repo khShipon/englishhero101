@@ -38,7 +38,7 @@ export async function ReadingPassagesPanel({
   }
 
   return (
-    <Card className="max-w-5xl">
+    <Card>
       <CardHeader>
         <CardTitle>Reading passages</CardTitle>
         <CardDescription>

@@ -23,9 +23,11 @@ export default async function EditLessonPage({
   const parentOptions = flattenParentOptions(tree);
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-[1fr_420px]">
       <LessonForm mode="edit" lessonId={lesson.id} parentOptions={parentOptions} defaultValues={lesson} />
-      <ReadingPassagesPanel lessonId={lesson.id} lessonTitle={lesson.title} />
+      <div className="xl:sticky xl:top-6">
+        <ReadingPassagesPanel lessonId={lesson.id} lessonTitle={lesson.title} />
+      </div>
     </div>
   );
 }
