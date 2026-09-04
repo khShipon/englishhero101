@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getIeltsReadingOverview } from "@/lib/admin/ielts-reading";
+import { createLessonQuestionSet } from "@/lib/admin/question-bank-actions";
 import { Badge } from "@/components/ui/badge";
-import { buttonVariants } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Plus } from "lucide-react";
 
@@ -68,13 +69,21 @@ export default async function IeltsReadingAdminPage() {
                     >
                       Manage passages
                     </Link>
-                    {lesson.questionSetId && (
+                    {lesson.questionSetId ? (
                       <Link
                         href={`/admin/question-banks/${lesson.questionSetId}`}
                         className={buttonVariants({ size: "sm" })}
                       >
                         Manage questions
                       </Link>
+                    ) : (
+                      <form action={createLessonQuestionSet}>
+                        <input type="hidden" name="lessonId" value={lesson.lessonId} />
+                        <input type="hidden" name="lessonTitle" value={lesson.lessonTitle} />
+                        <Button type="submit" size="sm">
+                          <Plus /> Add questions
+                        </Button>
+                      </form>
                     )}
                   </div>
                 </li>
