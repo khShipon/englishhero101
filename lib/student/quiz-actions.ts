@@ -23,8 +23,20 @@ export async function submitQuizAttempt(
   answers: SubmittedAnswer[],
 ): Promise<QuizResult> {
   const questionSet = await getQuestionSetById(questionSetId);
-  if (!questionSet || !questionSet.isPublished) {
+  if (!questionSet) {
     throw new Error("This question set is not available.");
+  }
+
+  // Unpublished sets can only be graded by an admin/editor previewing
+  // their own draft (see /admin/lessons/[id]/preview) — everyone else
+  // still gets the "not available" error a draft should show.
+  let isPreview = false;
+  if (!questionSet.isPublished) {
+    const previewer = await getCurrentUser();
+    if (!previewer || (previewer.role !== "admin" && previewer.role !== "editor")) {
+      throw new Error("This question set is not available.");
+    }
+    isPreview = true;
   }
 
   const questions = await getQuestionsBySet(questionSetId);
@@ -45,8 +57,10 @@ export async function submitQuizAttempt(
   const percent = scorableMarks > 0 ? Math.round((earnedMarks / scorableMarks) * 100) : 0;
 
   // Best-effort persistence for score history — guests still get a
-  // graded result above, they just don't get a saved attempt.
-  if (scorableMarks > 0) {
+  // graded result above, they just don't get a saved attempt. Preview
+  // runs never get saved, so an admin test-driving a draft doesn't
+  // pollute their own quiz history.
+  if (scorableMarks > 0 && !isPreview) {
     const user = await getCurrentUser();
     if (user) {
       const supabase = await createClient();
