@@ -5,7 +5,7 @@ import { createLessonQuestionSet } from "@/lib/admin/question-bank-actions";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Plus } from "lucide-react";
+import { Plus, Upload } from "lucide-react";
 
 export const metadata: Metadata = { title: "IELTS Reading — Admin — EnglishHero101" };
 
@@ -22,9 +22,17 @@ export default async function IeltsReadingAdminPage() {
           </p>
         </div>
         {newTestNodeId && (
-          <Link href={`/admin/lessons/new?node=${newTestNodeId}`} className={buttonVariants()}>
-            <Plus /> New reading test
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link
+              href="/admin/ielts-reading/import"
+              className={buttonVariants({ variant: "outline" })}
+            >
+              <Upload /> Import test
+            </Link>
+            <Link href={`/admin/lessons/new?node=${newTestNodeId}`} className={buttonVariants()}>
+              <Plus /> New reading test
+            </Link>
+          </div>
         )}
       </div>
 
