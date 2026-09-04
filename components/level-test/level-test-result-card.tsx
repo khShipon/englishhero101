@@ -35,7 +35,7 @@ export function LevelTestResultCard({
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
-            <Award className="size-4 text-primary" /> Your English level: {copy.label}
+            <Award className="size-4 text-primary" /> Placement test: {copy.label}
           </CardTitle>
           <CardDescription>{copy.blurb}</CardDescription>
         </CardHeader>

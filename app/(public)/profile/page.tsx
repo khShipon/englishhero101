@@ -5,6 +5,7 @@ import { getContinueLearning, getCompletedLessons } from "@/lib/queries/progress
 import { getUserBookmarks } from "@/lib/queries/bookmarks";
 import { getSpokenCourseProgress } from "@/lib/queries/course-progress";
 import { getLatestLevelTestResult } from "@/lib/queries/level-test";
+import { getUserPoints } from "@/lib/queries/points";
 import { getFeaturedLessons, getLessonsByDifficulty } from "@/lib/queries/lessons";
 import { WelcomeBanner } from "@/components/public/welcome-banner";
 import { LessonCard } from "@/components/public/lesson-card";
@@ -25,6 +26,7 @@ import {
   Rocket,
   Settings,
   Sparkles,
+  TrendingUp,
 } from "lucide-react";
 
 export const metadata: Metadata = { title: "Your profile — EnglishHero101" };
@@ -41,13 +43,14 @@ export default async function ProfilePage({
 }) {
   const [user, { welcome }] = await Promise.all([requireUser(), searchParams]);
 
-  const [continueLearning, bookmarks, completed, courseProgress, levelTestResult] =
+  const [continueLearning, bookmarks, completed, courseProgress, levelTestResult, points] =
     await Promise.all([
       getContinueLearning(),
       getUserBookmarks(),
       getCompletedLessons(),
       getSpokenCourseProgress(),
       getLatestLevelTestResult(),
+      getUserPoints(),
     ]);
 
   const recommendedLessons = levelTestResult
@@ -72,7 +75,7 @@ export default async function ProfilePage({
         </Link>
       </div>
 
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <div className="rounded-lg border px-3 py-2.5 text-center">
           <p className="text-lg font-semibold">{completed.length}</p>
           <p className="text-xs text-muted-foreground">Lessons completed</p>
@@ -82,16 +85,37 @@ export default async function ProfilePage({
           <p className="text-xs text-muted-foreground">Bookmarked</p>
         </div>
         <div className="rounded-lg border px-3 py-2.5 text-center">
-          <p className="text-lg font-semibold capitalize">{levelTestResult?.level ?? "—"}</p>
+          <p className="text-lg font-semibold">{points?.points ?? 0}</p>
+          <p className="text-xs text-muted-foreground">Points</p>
+        </div>
+        <div className="rounded-lg border px-3 py-2.5 text-center">
+          <p className="text-lg font-semibold">{points?.tierName ?? "Beginner"}</p>
           <p className="text-xs text-muted-foreground">Your level</p>
         </div>
       </div>
+
+      {points && (
+        <div className="flex flex-col gap-1.5">
+          <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+            <div
+              className="h-full rounded-full bg-primary transition-[width]"
+              style={{ width: `${points.progressPercent}%` }}
+            />
+          </div>
+          <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <TrendingUp className="size-3.5" />
+            {points.nextTierName
+              ? `${points.pointsToNextTier} points to ${points.nextTierName} — earn points by completing lessons and quizzes`
+              : "You've reached the top tier — keep completing lessons to stay sharp"}
+          </p>
+        </div>
+      )}
 
       {levelTestResult ? (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
-              <Award className="size-4 text-primary" /> Your English level:{" "}
+              <Award className="size-4 text-primary" /> Placement test:{" "}
               <span className="capitalize">{levelTestResult.level}</span>
             </CardTitle>
             <CardDescription>
