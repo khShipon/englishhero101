@@ -194,6 +194,28 @@ export async function getRelatedLessons(nodeId: string, excludeId: string, limit
   return (data ?? []).map(mapLesson);
 }
 
+// Recommendations for a learner's placement-test level. difficulty is
+// free-text (see 001_initial_schema.sql) but the seed data and admin
+// UI both stick to "beginner" | "intermediate" | "advanced", matching
+// the bands the level test itself produces.
+export async function getLessonsByDifficulty(difficulty: string, limit = 6): Promise<Lesson[]> {
+  "use cache";
+  cacheLife("hours");
+  cacheTag(LESSONS_TAG);
+
+  const supabase = createPublicClient();
+  const { data, error } = await supabase
+    .from("lessons")
+    .select(LESSON_COLUMNS)
+    .eq("status", "published")
+    .eq("difficulty", difficulty)
+    .order("published_at", { ascending: false })
+    .limit(limit);
+
+  if (error) throw error;
+  return (data ?? []).map(mapLesson);
+}
+
 export async function getRecentPublishedLessons(limit = 6): Promise<Lesson[]> {
   "use cache";
   cacheLife("hours");

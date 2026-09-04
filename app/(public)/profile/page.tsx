@@ -4,7 +4,10 @@ import { requireUser } from "@/lib/auth/dal";
 import { getContinueLearning, getCompletedLessons } from "@/lib/queries/progress";
 import { getUserBookmarks } from "@/lib/queries/bookmarks";
 import { getSpokenCourseProgress } from "@/lib/queries/course-progress";
+import { getLatestLevelTestResult } from "@/lib/queries/level-test";
+import { getFeaturedLessons, getLessonsByDifficulty } from "@/lib/queries/lessons";
 import { WelcomeBanner } from "@/components/public/welcome-banner";
+import { LessonCard } from "@/components/public/lesson-card";
 import {
   Card,
   CardContent,
@@ -13,7 +16,16 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { buttonVariants } from "@/components/ui/button";
-import { BookOpen, Bookmark, CircleCheckBig, GraduationCap, Rocket, Settings } from "lucide-react";
+import {
+  Award,
+  BookOpen,
+  Bookmark,
+  CircleCheckBig,
+  GraduationCap,
+  Rocket,
+  Settings,
+  Sparkles,
+} from "lucide-react";
 
 export const metadata: Metadata = { title: "Your profile — EnglishHero101" };
 
@@ -29,12 +41,18 @@ export default async function ProfilePage({
 }) {
   const [user, { welcome }] = await Promise.all([requireUser(), searchParams]);
 
-  const [continueLearning, bookmarks, completed, courseProgress] = await Promise.all([
-    getContinueLearning(),
-    getUserBookmarks(),
-    getCompletedLessons(),
-    getSpokenCourseProgress(),
-  ]);
+  const [continueLearning, bookmarks, completed, courseProgress, levelTestResult] =
+    await Promise.all([
+      getContinueLearning(),
+      getUserBookmarks(),
+      getCompletedLessons(),
+      getSpokenCourseProgress(),
+      getLatestLevelTestResult(),
+    ]);
+
+  const recommendedLessons = levelTestResult
+    ? await getLessonsByDifficulty(levelTestResult.level, 4)
+    : await getFeaturedLessons(4);
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 px-4 py-12">
@@ -53,6 +71,74 @@ export default async function ProfilePage({
           <Settings /> Settings
         </Link>
       </div>
+
+      <div className="grid grid-cols-3 gap-3">
+        <div className="rounded-lg border px-3 py-2.5 text-center">
+          <p className="text-lg font-semibold">{completed.length}</p>
+          <p className="text-xs text-muted-foreground">Lessons completed</p>
+        </div>
+        <div className="rounded-lg border px-3 py-2.5 text-center">
+          <p className="text-lg font-semibold">{bookmarks.length}</p>
+          <p className="text-xs text-muted-foreground">Bookmarked</p>
+        </div>
+        <div className="rounded-lg border px-3 py-2.5 text-center">
+          <p className="text-lg font-semibold capitalize">{levelTestResult?.level ?? "—"}</p>
+          <p className="text-xs text-muted-foreground">Your level</p>
+        </div>
+      </div>
+
+      {levelTestResult ? (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Award className="size-4 text-primary" /> Your English level:{" "}
+              <span className="capitalize">{levelTestResult.level}</span>
+            </CardTitle>
+            <CardDescription>
+              Score: {levelTestResult.score} / {levelTestResult.total} ({levelTestResult.percent}%)
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Link href="/level-test?retake=1" className={buttonVariants({ variant: "outline", size: "sm" })}>
+              Retake test
+            </Link>
+          </CardContent>
+        </Card>
+      ) : (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Sparkles className="size-4 text-primary" /> Test your English level
+            </CardTitle>
+            <CardDescription>
+              A quick 5-minute quiz covering grammar, vocabulary, fill-in-the-blank, and listening —
+              we&apos;ll recommend lessons matched to your level.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Link href="/level-test" className={buttonVariants({ size: "sm" })}>
+              Start the test
+            </Link>
+          </CardContent>
+        </Card>
+      )}
+
+      {recommendedLessons.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Sparkles className="size-4" />{" "}
+              {levelTestResult ? "Recommended for your level" : "Lessons you might like"}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {recommendedLessons.map((lesson) => (
+              <LessonCard key={lesson.id} lesson={lesson} />
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
       {courseProgress && courseProgress.totalLessons > 0 && (
         <Card>
           <CardHeader>
