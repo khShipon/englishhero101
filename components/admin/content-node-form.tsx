@@ -133,7 +133,14 @@ export function ContentNodeForm({
 
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="parentId">Parent</Label>
-              <Select name="parentId" defaultValue={defaultValues?.parentId ?? "none"}>
+              <Select
+                name="parentId"
+                defaultValue={defaultValues?.parentId ?? "none"}
+                items={[
+                  { value: "none", label: "None (top level)" },
+                  ...parentOptions.map((option) => ({ value: option.id, label: option.label })),
+                ]}
+              >
                 <SelectTrigger id="parentId" className="w-full">
                   <SelectValue placeholder="None (top level)" />
                 </SelectTrigger>

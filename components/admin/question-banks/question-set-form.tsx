@@ -37,6 +37,15 @@ const BOARD_SUGGESTIONS = [
   "Technical Board",
 ];
 
+// Base UI's Select.Value shows the raw stored value unless Select.Root
+// is given an items map to resolve labels from — see components/ui/select.tsx.
+const DIFFICULTY_ITEMS = [
+  { value: "none", label: "Not set" },
+  { value: "beginner", label: "Beginner" },
+  { value: "intermediate", label: "Intermediate" },
+  { value: "advanced", label: "Advanced" },
+];
+
 export function QuestionSetForm({
   mode,
   questionSetId,
@@ -85,7 +94,14 @@ export function QuestionSetForm({
 
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="nodeId">Category (optional)</Label>
-            <Select name="nodeId" defaultValue={defaultValues?.nodeId ?? "none"}>
+            <Select
+              name="nodeId"
+              defaultValue={defaultValues?.nodeId ?? "none"}
+              items={[
+                { value: "none", label: "None" },
+                ...parentOptions.map((option) => ({ value: option.id, label: option.label })),
+              ]}
+            >
               <SelectTrigger id="nodeId" className="w-full">
                 <SelectValue placeholder="None" />
               </SelectTrigger>
@@ -171,7 +187,11 @@ export function QuestionSetForm({
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="difficulty">Difficulty</Label>
-              <Select name="difficulty" defaultValue={defaultValues?.difficulty ?? "none"}>
+              <Select
+                name="difficulty"
+                defaultValue={defaultValues?.difficulty ?? "none"}
+                items={DIFFICULTY_ITEMS}
+              >
                 <SelectTrigger id="difficulty" className="w-full">
                   <SelectValue />
                 </SelectTrigger>
