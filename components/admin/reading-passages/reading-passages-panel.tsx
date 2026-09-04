@@ -1,16 +1,19 @@
 import Link from "next/link";
 import { getReadingPassagesByLessonAdmin } from "@/lib/queries/reading-passages";
-import { getQuestionSetsByLesson } from "@/lib/queries/question-banks";
+import { getQuestionSetsByLesson, getQuestionsBySet } from "@/lib/queries/question-banks";
 import { createLessonQuestionSet } from "@/lib/admin/question-bank-actions";
 import { DeleteReadingPassageDialog } from "./delete-reading-passage-dialog";
+import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Plus } from "lucide-react";
 
 // Lives on the lesson edit page: lets an admin build a reading-test
 // lesson end to end — the structured passages the split-screen test UI
-// reads, plus a link into the existing question-set admin (which
-// already supports every question type) for that lesson's practice set.
+// reads, plus a per-passage shortcut into the question-set admin so
+// each passage's questions can be added without hunting for the right
+// entry point (questions are still one flat set under the hood, tagged
+// per-question with metadata.passage_number — see question-form.tsx).
 export async function ReadingPassagesPanel({
   lessonId,
   lessonTitle,
@@ -23,13 +26,24 @@ export async function ReadingPassagesPanel({
     getQuestionSetsByLesson(lessonId),
   ]);
 
+  const questionSet = questionSets[0] ?? null;
+  const questions = questionSet ? await getQuestionsBySet(questionSet.id) : [];
+
+  const countByPassage = new Map<number, number>();
+  for (const question of questions) {
+    const passageNumber = (question.metadata as { passage_number?: number } | null)?.passage_number;
+    if (typeof passageNumber === "number") {
+      countByPassage.set(passageNumber, (countByPassage.get(passageNumber) ?? 0) + 1);
+    }
+  }
+
   return (
     <Card className="max-w-5xl">
       <CardHeader>
         <CardTitle>Reading passages</CardTitle>
         <CardDescription>
-          For IELTS-style reading tests: add the passages here, then tag each question in the
-          practice set below with the passage it belongs to.
+          For IELTS-style reading tests: add each passage, then add that passage&apos;s own
+          questions right next to it.
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
@@ -38,12 +52,24 @@ export async function ReadingPassagesPanel({
             {passages.map((passage) => (
               <li
                 key={passage.id}
-                className="flex items-center justify-between gap-2 rounded-md border px-3 py-2"
+                className="flex flex-wrap items-center justify-between gap-2 rounded-md border px-3 py-2"
               >
-                <span className="text-sm font-medium">
+                <span className="flex items-center gap-2 text-sm font-medium">
                   Passage {passage.passageNumber}: {passage.title}
+                  <Badge variant="outline">
+                    {countByPassage.get(passage.passageNumber) ?? 0} question
+                    {countByPassage.get(passage.passageNumber) === 1 ? "" : "s"}
+                  </Badge>
                 </span>
                 <div className="flex items-center gap-1">
+                  {questionSet && (
+                    <Link
+                      href={`/admin/question-banks/${questionSet.id}/questions/new?passage=${passage.passageNumber}`}
+                      className={buttonVariants({ size: "sm" })}
+                    >
+                      <Plus /> Add question
+                    </Link>
+                  )}
                   <Link
                     href={`/admin/lessons/${lessonId}/reading-passages/${passage.id}/edit`}
                     className={buttonVariants({ variant: "outline", size: "sm" })}
@@ -72,13 +98,20 @@ export async function ReadingPassagesPanel({
 
         <div className="flex flex-col gap-1.5 border-t pt-4">
           <p className="text-sm font-medium">Practice set (questions &amp; answers)</p>
-          {questionSets.length > 0 ? (
-            <Link
-              href={`/admin/question-banks/${questionSets[0].id}`}
-              className={buttonVariants({ size: "sm", className: "w-fit" })}
-            >
-              Manage practice set
-            </Link>
+          {questionSet ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <Link
+                href={`/admin/question-banks/${questionSet.id}`}
+                className={buttonVariants({ size: "sm" })}
+              >
+                Manage all questions ({questions.length})
+              </Link>
+              {!questionSet.isPublished && (
+                <span className="text-xs text-muted-foreground">
+                  Draft — publish it from the practice set page once it&apos;s ready.
+                </span>
+              )}
+            </div>
           ) : (
             <form action={createLessonQuestionSet}>
               <input type="hidden" name="lessonId" value={lessonId} />

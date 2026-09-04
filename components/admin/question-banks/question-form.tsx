@@ -8,6 +8,7 @@ import {
   type QuestionType,
   type StructuredData,
 } from "@/lib/admin/question-validation";
+import { IELTS_READING_QUESTION_TYPES } from "@/lib/admin/ielts-reading-question-types";
 import type { Question } from "@/lib/queries/question-banks";
 import type { ReadingPassage } from "@/lib/queries/reading-passages";
 import { OptionsEditor, PairsEditor, OrderItemsEditor, type OptionValue, type PairValue } from "./structured-editors";
@@ -49,21 +50,27 @@ export function QuestionForm({
   questionSetId,
   defaultValues,
   passages,
+  initialPassageNumber,
 }: {
   mode: "create" | "edit";
   questionId?: string;
   questionSetId: string;
   defaultValues?: Question;
   passages?: ReadingPassage[];
+  initialPassageNumber?: number;
 }) {
   const action = mode === "create" ? createQuestion : updateQuestion;
   const [state, formAction, pending] = useActionState<QuestionFormState, FormData>(action, undefined);
 
-  const defaultPassageNumber = (defaultValues?.metadata as { passage_number?: number } | undefined)
-    ?.passage_number;
+  const defaultPassageNumber =
+    (defaultValues?.metadata as { passage_number?: number } | undefined)?.passage_number ??
+    initialPassageNumber;
 
   const [questionType, setQuestionType] = useState<QuestionType>(
     defaultValues?.questionType ?? "multiple_choice",
+  );
+  const [ieltsPreset, setIeltsPreset] = useState<string>(
+    (defaultValues?.metadata as { ielts_question_type?: string } | undefined)?.ielts_question_type ?? "",
   );
   const [options, setOptions] = useState<OptionValue[]>(() => {
     if (defaultValues && CHOICE_TYPES.includes(defaultValues.questionType)) {
@@ -89,6 +96,7 @@ export function QuestionForm({
 
   function handleTypeChange(next: QuestionType) {
     setQuestionType(next);
+    setIeltsPreset(""); // manual override no longer matches a preset's fixed options
     if (CHOICE_TYPES.includes(next) && options.every((option) => option.text === "")) {
       setOptions(defaultOptionsFor(next));
     }
@@ -96,6 +104,23 @@ export function QuestionForm({
       setOptions(defaultOptionsFor(next));
     }
   }
+
+  function handlePresetChange(key: string) {
+    setIeltsPreset(key);
+    const preset = IELTS_READING_QUESTION_TYPES.find((type) => type.key === key);
+    if (!preset) return;
+    setQuestionType(preset.questionType);
+    if (preset.presetOptions) {
+      setOptions(preset.presetOptions.map((text) => ({ text, isCorrect: false })));
+    } else if (CHOICE_TYPES.includes(preset.questionType)) {
+      setOptions(defaultOptionsFor(preset.questionType));
+    } else if (preset.questionType === "matching") {
+      setPairs([{ left: "", right: "" }]);
+    }
+  }
+
+  const selectedPreset = IELTS_READING_QUESTION_TYPES.find((type) => type.key === ieltsPreset) ?? null;
+  const optionsLocked = selectedPreset ? !!selectedPreset.presetOptions : questionType === "true_false";
 
   const structuredData: StructuredData = useMemo(() => {
     if (CHOICE_TYPES.includes(questionType)) {
@@ -126,10 +151,36 @@ export function QuestionForm({
           {questionId && <input type="hidden" name="id" value={questionId} />}
           <input type="hidden" name="questionSetId" value={questionSetId} />
           <input type="hidden" name="structuredData" value={JSON.stringify(structuredData)} />
+          <input type="hidden" name="ieltsQuestionType" value={ieltsPreset} />
           {state?.error && (
             <Alert variant="destructive">
               <AlertDescription>{state.error}</AlertDescription>
             </Alert>
+          )}
+
+          {isIeltsReading && (
+            <div className="flex flex-col gap-1.5 rounded-md border bg-muted/30 p-3">
+              <Label htmlFor="ieltsPreset">IELTS reading question type</Label>
+              <Select
+                value={ieltsPreset || "none"}
+                onValueChange={(value) => handlePresetChange(!value || value === "none" ? "" : value)}
+              >
+                <SelectTrigger id="ieltsPreset" className="w-full bg-background">
+                  <SelectValue placeholder="Choose to auto-fill defaults" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Custom (use the question type below)</SelectItem>
+                  {IELTS_READING_QUESTION_TYPES.map((type) => (
+                    <SelectItem key={type.key} value={type.key}>
+                      {type.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {selectedPreset && (
+                <p className="text-sm text-muted-foreground">{selectedPreset.hint}</p>
+              )}
+            </div>
           )}
 
           <div className="flex flex-col gap-1.5">
@@ -195,7 +246,7 @@ export function QuestionForm({
                 options={options}
                 onChange={setOptions}
                 multiple={questionType === "multiple_answer"}
-                locked={questionType === "true_false"}
+                locked={optionsLocked}
               />
               {state?.fieldErrors?.structuredData && (
                 <p className="text-sm text-destructive">{state.fieldErrors.structuredData[0]}</p>

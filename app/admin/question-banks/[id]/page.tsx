@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getQuestionSetById, getQuestionsBySet } from "@/lib/queries/question-banks";
+import { getReadingPassagesByLessonAdmin } from "@/lib/queries/reading-passages";
 import { QuestionsList } from "@/components/admin/question-banks/questions-list";
+import { QuestionsByPassage } from "@/components/admin/question-banks/questions-by-passage";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -24,6 +26,10 @@ export default async function QuestionSetPage({
   if (!questionSet) {
     notFound();
   }
+
+  const passages = questionSet.lessonId
+    ? await getReadingPassagesByLessonAdmin(questionSet.lessonId)
+    : [];
 
   return (
     <div className="flex flex-col gap-6">
@@ -69,7 +75,11 @@ export default async function QuestionSetPage({
 
       <Card>
         <CardContent>
-          <QuestionsList questions={questions} questionSetId={questionSet.id} />
+          {passages.length > 0 ? (
+            <QuestionsByPassage questions={questions} passages={passages} questionSetId={questionSet.id} />
+          ) : (
+            <QuestionsList questions={questions} questionSetId={questionSet.id} />
+          )}
         </CardContent>
       </Card>
     </div>

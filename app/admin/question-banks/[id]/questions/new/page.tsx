@@ -8,10 +8,13 @@ export const metadata: Metadata = { title: "New question — Admin — EnglishHe
 
 export default async function NewQuestionPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ passage?: string }>;
 }) {
   const { id } = await params;
+  const { passage } = await searchParams;
   const questionSet = await getQuestionSetById(id);
 
   if (!questionSet) {
@@ -22,5 +25,16 @@ export default async function NewQuestionPage({
     ? await getReadingPassagesByLessonAdmin(questionSet.lessonId)
     : [];
 
-  return <QuestionForm mode="create" questionSetId={questionSet.id} passages={passages} />;
+  const initialPassageNumber = passage ? Number(passage) : undefined;
+
+  return (
+    <QuestionForm
+      mode="create"
+      questionSetId={questionSet.id}
+      passages={passages}
+      initialPassageNumber={
+        initialPassageNumber && Number.isFinite(initialPassageNumber) ? initialPassageNumber : undefined
+      }
+    />
+  );
 }

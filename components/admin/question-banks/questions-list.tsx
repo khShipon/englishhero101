@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Question } from "@/lib/queries/question-banks";
+import { getIeltsReadingQuestionType } from "@/lib/admin/ielts-reading-question-types";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { moveQuestion } from "@/lib/admin/question-actions";
@@ -16,6 +17,15 @@ const TYPE_LABELS: Record<string, string> = {
   ordering: "Ordering",
   written_answer: "Written answer",
 };
+
+function typeLabel(question: Question): string {
+  const ieltsType = (question.metadata as { ielts_question_type?: string } | null)?.ielts_question_type;
+  return (
+    getIeltsReadingQuestionType(ieltsType)?.label ??
+    TYPE_LABELS[question.questionType] ??
+    question.questionType
+  );
+}
 
 export function QuestionsList({
   questions,
@@ -36,9 +46,7 @@ export function QuestionsList({
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-medium">{question.questionText}</p>
             <div className="mt-1 flex items-center gap-2">
-              <Badge variant="outline">
-                {TYPE_LABELS[question.questionType] ?? question.questionType}
-              </Badge>
+              <Badge variant="outline">{typeLabel(question)}</Badge>
               <span className="text-xs text-muted-foreground">{question.marks} marks</span>
             </div>
           </div>

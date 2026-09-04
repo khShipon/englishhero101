@@ -103,6 +103,12 @@ export const questionSchema = z.object({
     .string()
     .transform((value) => (value.trim() === "" || value === "none" ? null : Number(value)))
     .pipe(z.number().int().min(1).max(20).nullable()),
+  // Which IELTS reading preset (see lib/admin/ielts-reading-question-types.ts)
+  // was used to fill in questionType/options — purely cosmetic, so the
+  // admin list can show "True / False / Not Given" instead of the
+  // generic "True/False" badge. Blank when a question wasn't created
+  // from a preset (e.g. non-reading question sets).
+  ieltsQuestionType: optionalText(50),
   structuredData: z
     .string()
     .transform((value, ctx) => {

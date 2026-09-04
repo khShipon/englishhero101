@@ -41,6 +41,7 @@ function parseQuestionForm(formData: FormData) {
     difficulty: formData.get("difficulty") ?? "none",
     correctAnswer: formData.get("correctAnswer") ?? "",
     passageNumber: formData.get("passageNumber") ?? "",
+    ieltsQuestionType: formData.get("ieltsQuestionType") ?? "",
     structuredData: formData.get("structuredData") ?? "{}",
   });
 }
@@ -89,9 +90,12 @@ async function writeOptions(
 function metadataFor(
   structuredData: StructuredData,
   passageNumber: number | null,
+  ieltsQuestionType: string | null,
 ): Record<string, unknown> {
-  const base = structuredData.type === "matching" ? { pairs: structuredData.pairs } : {};
-  return passageNumber !== null ? { ...base, passage_number: passageNumber } : base;
+  let metadata: Record<string, unknown> = structuredData.type === "matching" ? { pairs: structuredData.pairs } : {};
+  if (passageNumber !== null) metadata = { ...metadata, passage_number: passageNumber };
+  if (ieltsQuestionType !== null) metadata = { ...metadata, ielts_question_type: ieltsQuestionType };
+  return metadata;
 }
 
 function correctAnswerFor(structuredData: StructuredData, rawCorrectAnswer: string | null) {
@@ -139,7 +143,7 @@ export async function createQuestion(
       difficulty: parsed.data.difficulty,
       sort_order: sortOrder,
       correct_answer: correctAnswerFor(parsed.data.structuredData, parsed.data.correctAnswer),
-      metadata: metadataFor(parsed.data.structuredData, parsed.data.passageNumber),
+      metadata: metadataFor(parsed.data.structuredData, parsed.data.passageNumber, parsed.data.ieltsQuestionType),
     })
     .select("id")
     .single();
@@ -182,7 +186,7 @@ export async function updateQuestion(
       marks: parsed.data.marks,
       difficulty: parsed.data.difficulty,
       correct_answer: correctAnswerFor(parsed.data.structuredData, parsed.data.correctAnswer),
-      metadata: metadataFor(parsed.data.structuredData, parsed.data.passageNumber),
+      metadata: metadataFor(parsed.data.structuredData, parsed.data.passageNumber, parsed.data.ieltsQuestionType),
     })
     .eq("id", id);
 
