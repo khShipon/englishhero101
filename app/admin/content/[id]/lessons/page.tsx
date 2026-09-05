@@ -3,8 +3,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getNodeById } from "@/lib/queries/content";
 import { getLessonsByNode, getLessonsBySubtree } from "@/lib/queries/lessons";
+import { getQuestionSetStatusByLessons } from "@/lib/queries/question-banks";
+import { createLessonQuestionSet } from "@/lib/admin/question-bank-actions";
 import { Badge } from "@/components/ui/badge";
-import { buttonVariants } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Table,
@@ -37,6 +39,8 @@ export default async function NodeLessonsPage({
     notFound();
   }
 
+  const questionSetByLesson = await getQuestionSetStatusByLessons(lessons.map((lesson) => lesson.id));
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -66,49 +70,80 @@ export default async function NodeLessonsPage({
                 <TableRow>
                   <TableHead>Title</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>Questions</TableHead>
                   <TableHead>Updated</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {lessons.map((lesson) => (
-                  <TableRow key={lesson.id}>
-                    <TableCell className="font-medium">{lesson.title}</TableCell>
-                    <TableCell>
-                      <Badge variant={lesson.status === "published" ? "default" : "secondary"}>
-                        {lesson.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {new Date(lesson.updatedAt).toLocaleDateString()}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex justify-end gap-1">
-                        <Link
-                          href={`/admin/lessons/${lesson.id}/preview`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className={buttonVariants({ variant: "ghost", size: "icon-sm" })}
-                          aria-label="Preview"
-                        >
-                          <Eye />
-                        </Link>
-                        <Link
-                          href={`/admin/lessons/${lesson.id}/edit`}
-                          className={buttonVariants({ variant: "ghost", size: "icon-sm" })}
-                          aria-label="Edit"
-                        >
-                          <Pencil />
-                        </Link>
-                        <DeleteLessonDialog
-                          lessonId={lesson.id}
-                          nodeId={node.id}
-                          title={lesson.title}
-                        />
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {lessons.map((lesson) => {
+                  const questionSet = questionSetByLesson.get(lesson.id) ?? null;
+                  return (
+                    <TableRow key={lesson.id}>
+                      <TableCell className="font-medium">{lesson.title}</TableCell>
+                      <TableCell>
+                        <Badge variant={lesson.status === "published" ? "default" : "secondary"}>
+                          {lesson.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {questionSet ? (
+                          <Badge variant={questionSet.isPublished ? "default" : "outline"}>
+                            {questionSet.questionCount} question
+                            {questionSet.questionCount === 1 ? "" : "s"}
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline">None</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {new Date(lesson.updatedAt).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex justify-end gap-1">
+                          {questionSet ? (
+                            <Link
+                              href={`/admin/question-banks/${questionSet.id}`}
+                              className={buttonVariants({ variant: "outline", size: "sm" })}
+                            >
+                              Manage questions
+                            </Link>
+                          ) : (
+                            <form action={createLessonQuestionSet}>
+                              <input type="hidden" name="lessonId" value={lesson.id} />
+                              <input type="hidden" name="lessonTitle" value={lesson.title} />
+                              <input type="hidden" name="nodeId" value={node.id} />
+                              <Button type="submit" variant="outline" size="sm">
+                                <Plus /> Add questions
+                              </Button>
+                            </form>
+                          )}
+                          <Link
+                            href={`/admin/lessons/${lesson.id}/preview`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className={buttonVariants({ variant: "ghost", size: "icon-sm" })}
+                            aria-label="Preview"
+                          >
+                            <Eye />
+                          </Link>
+                          <Link
+                            href={`/admin/lessons/${lesson.id}/edit`}
+                            className={buttonVariants({ variant: "ghost", size: "icon-sm" })}
+                            aria-label="Edit"
+                          >
+                            <Pencil />
+                          </Link>
+                          <DeleteLessonDialog
+                            lessonId={lesson.id}
+                            nodeId={node.id}
+                            title={lesson.title}
+                          />
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           )}

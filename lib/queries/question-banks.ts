@@ -280,6 +280,54 @@ export const getQuestionSetsByLesson = cache(async (lessonId: string): Promise<Q
   return (data ?? []).map(mapQuestionSet);
 });
 
+export type LessonQuestionSetStatus = {
+  id: string;
+  isPublished: boolean;
+  questionCount: number;
+};
+
+// Batched lookup for lesson-list pages (Content's per-node lesson table,
+// IELTS Reading's overview, etc.) so each row can show an "Add
+// questions"/"Manage questions" affordance without an N+1 query per lesson.
+export const getQuestionSetStatusByLessons = cache(
+  async (lessonIds: string[]): Promise<Map<string, LessonQuestionSetStatus>> => {
+    if (lessonIds.length === 0) return new Map();
+
+    const supabase = await createClient();
+    const { data: sets, error } = await supabase
+      .from("question_sets")
+      .select("id, lesson_id, is_published")
+      .in("lesson_id", lessonIds);
+
+    if (error) throw error;
+
+    const setIds = (sets ?? []).map((set) => set.id);
+    const countBySet = new Map<string, number>();
+    if (setIds.length > 0) {
+      const { data: questions, error: questionsError } = await supabase
+        .from("questions")
+        .select("question_set_id")
+        .in("question_set_id", setIds);
+
+      if (questionsError) throw questionsError;
+      for (const row of questions ?? []) {
+        countBySet.set(row.question_set_id, (countBySet.get(row.question_set_id) ?? 0) + 1);
+      }
+    }
+
+    const result = new Map<string, LessonQuestionSetStatus>();
+    for (const set of sets ?? []) {
+      if (!set.lesson_id) continue;
+      result.set(set.lesson_id, {
+        id: set.id,
+        isPublished: set.is_published,
+        questionCount: countBySet.get(set.id) ?? 0,
+      });
+    }
+    return result;
+  },
+);
+
 export const getQuestionSetById = cache(async (id: string): Promise<QuestionSet | null> => {
   const supabase = await createClient();
   const { data, error } = await supabase

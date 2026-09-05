@@ -149,6 +149,7 @@ export async function createLessonQuestionSet(formData: FormData) {
   await requireRole(["admin", "editor"]);
   const lessonId = String(formData.get("lessonId") ?? "");
   const lessonTitle = String(formData.get("lessonTitle") ?? "");
+  const nodeId = String(formData.get("nodeId") ?? "");
   if (!lessonId) return;
 
   const supabase = await createClient();
@@ -167,6 +168,7 @@ export async function createLessonQuestionSet(formData: FormData) {
   }
 
   revalidatePath(`/admin/lessons/${lessonId}/edit`);
+  if (nodeId) revalidatePath(`/admin/content/${nodeId}/lessons`);
   updateTag(QUESTION_SETS_TAG);
   redirect(`/admin/question-banks/${data.id}`);
 }
