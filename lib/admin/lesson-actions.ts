@@ -77,7 +77,7 @@ export async function createLesson(
       seo_description: parsed.data.seoDescription,
       published_at: status === "published" ? new Date().toISOString() : null,
     })
-    .select("node_id")
+    .select("id, node_id")
     .single();
 
   if (error || !data) {
@@ -86,7 +86,10 @@ export async function createLesson(
 
   revalidatePath(`/admin/content/${data.node_id}/lessons`);
   updateTag(LESSONS_TAG);
-  redirect(`/admin/content/${data.node_id}/lessons`);
+  // Land on the lesson's own editor rather than the list — that's the
+  // only place Preview and Add Questions can work, since both are
+  // foreign-keyed to a saved lesson id.
+  redirect(`/admin/lessons/${data.id}/edit`);
 }
 
 export async function updateLesson(

@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import Link from "next/link";
 import { createLesson, updateLesson, type LessonFormState } from "@/lib/admin/lesson-actions";
+import { createLessonQuestionSet } from "@/lib/admin/question-bank-actions";
 import type { ParentOption } from "@/lib/admin/parent-options";
 import type { Lesson } from "@/lib/queries/lessons";
 import { LessonRichTextEditor } from "./lesson-rich-text-editor";
@@ -13,6 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Plus } from "lucide-react";
 
 // Base UI's Select.Value shows the raw stored value unless Select.Root
 // is given an items map to resolve labels from — see components/ui/select.tsx.
@@ -29,12 +31,14 @@ export function LessonForm({
   parentOptions,
   defaultNodeId,
   defaultValues,
+  questionSetId,
 }: {
   mode: "create" | "edit";
   lessonId?: string;
   parentOptions: ParentOption[];
   defaultNodeId?: string;
   defaultValues?: Partial<Lesson>;
+  questionSetId?: string | null;
 }) {
   const action = mode === "create" ? createLesson : updateLesson;
   const [state, formAction, pending] = useActionState<LessonFormState, FormData>(action, undefined);
@@ -42,8 +46,36 @@ export function LessonForm({
 
   return (
     <Card className="max-w-4xl">
-      <CardHeader>
+      <CardHeader className="flex-row items-center justify-between gap-4">
         <CardTitle>{mode === "create" ? "New lesson" : "Edit lesson"}</CardTitle>
+        {lessonId && (
+          <div className="flex shrink-0 items-center gap-2">
+            <Link
+              href={`/admin/lessons/${lessonId}/preview`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={buttonVariants({ variant: "outline", size: "sm" })}
+            >
+              Preview
+            </Link>
+            {questionSetId ? (
+              <Link
+                href={`/admin/question-banks/${questionSetId}`}
+                className={buttonVariants({ size: "sm" })}
+              >
+                Manage questions
+              </Link>
+            ) : (
+              <form action={createLessonQuestionSet}>
+                <input type="hidden" name="lessonId" value={lessonId} />
+                <input type="hidden" name="lessonTitle" value={defaultValues?.title ?? ""} />
+                <Button type="submit" size="sm">
+                  <Plus /> Add questions
+                </Button>
+              </form>
+            )}
+          </div>
+        )}
       </CardHeader>
       <form action={formAction}>
         <CardContent className="flex flex-col gap-4">
@@ -181,16 +213,6 @@ export function LessonForm({
                 Publish
               </Button>
             </>
-          )}
-          {lessonId && (
-            <Link
-              href={`/admin/lessons/${lessonId}/preview`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={buttonVariants({ variant: "ghost" })}
-            >
-              Preview
-            </Link>
           )}
         </CardFooter>
       </form>
