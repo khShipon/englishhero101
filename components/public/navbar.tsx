@@ -6,9 +6,10 @@ import { SearchBox } from "@/components/public/search-box";
 import { MobileNav } from "@/components/public/mobile-nav";
 import { NavCategoryLink } from "@/components/public/nav-category-link";
 import { ProfileMenu } from "@/components/public/profile-menu";
+import { BrandLogo } from "@/components/public/brand-logo";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { buttonVariants } from "@/components/ui/button";
-import { GraduationCap, User } from "lucide-react";
+import { User } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // Reads the session cookie, so it's the one part of the navbar that
@@ -21,9 +22,23 @@ async function AuthLink() {
     return <ProfileMenu fullName={user.fullName} email={user.email} />;
   }
   return (
-    <Link href="/login" className={cn(buttonVariants({ variant: "outline", size: "sm" }), "shrink-0")}>
-      <User /> Login
-    </Link>
+    <span className="flex shrink-0 items-center gap-2">
+      <Link
+        href="/login"
+        className="hidden text-sm font-medium text-muted-foreground hover:text-brand-navy dark:hover:text-white sm:block"
+      >
+        Login
+      </Link>
+      <Link
+        href="/register"
+        className={cn(
+          buttonVariants({ size: "sm" }),
+          "rounded-full bg-brand-orange px-4 text-brand-orange-foreground hover:bg-brand-orange/90",
+        )}
+      >
+        Sign Up
+      </Link>
+    </span>
   );
 }
 
@@ -31,9 +46,9 @@ function AuthLinkFallback() {
   return (
     <span
       aria-hidden
-      className={cn(buttonVariants({ variant: "outline", size: "sm" }), "shrink-0 opacity-0")}
+      className={cn(buttonVariants({ size: "sm" }), "shrink-0 rounded-full px-4 opacity-0")}
     >
-      <User /> Login
+      <User /> Sign Up
     </span>
   );
 }
@@ -47,11 +62,10 @@ export async function Navbar() {
 
   return (
     <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur-xs supports-backdrop-filter:bg-background/60">
-      <div className="mx-auto flex h-14 max-w-[1800px] items-center gap-2 px-3 lg:px-4 2xl:gap-3 2xl:px-6">
+      <div className="mx-auto flex h-16 max-w-[1800px] items-center gap-2 px-3 lg:px-4 2xl:gap-3 2xl:px-6">
         <MobileNav categories={categories} />
-        <Link href="/" className="flex shrink-0 items-center gap-1.5 text-lg font-semibold tracking-tight">
-          <GraduationCap className="size-5 text-primary" />
-          EnglishHero101
+        <Link href="/">
+          <BrandLogo />
         </Link>
         {/* Switches over at lg (1024px), not md (768px) — at tablet
             width, 7+ category links plus search plus login don't fit
@@ -61,16 +75,16 @@ export async function Navbar() {
             row room to breathe; overflow-x-auto stays only as a
             defensive fallback for an admin adding enough top-level
             categories to overflow even that. */}
-        <nav className="hidden min-w-0 flex-1 items-center overflow-x-auto lg:flex">
+        <nav className="hidden min-w-0 flex-1 items-center justify-center overflow-x-auto lg:flex">
           <Link
             href="/"
-            className="flex shrink-0 items-center rounded-lg px-1 py-1.5 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
+            className="flex shrink-0 items-center rounded-lg px-2 py-1.5 text-sm font-medium text-muted-foreground hover:bg-brand-navy/5 hover:text-brand-navy dark:hover:text-white"
           >
             Home
           </Link>
           <Link
             href="/question-banks"
-            className="flex shrink-0 items-center rounded-lg px-1 py-1.5 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
+            className="flex shrink-0 items-center rounded-lg px-2 py-1.5 text-sm font-medium text-muted-foreground hover:bg-brand-navy/5 hover:text-brand-navy dark:hover:text-white"
           >
             Question Banks
           </Link>

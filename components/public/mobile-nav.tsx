@@ -10,11 +10,13 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { SearchBox } from "@/components/public/search-box";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { BrandLogo } from "@/components/public/brand-logo";
 import { CATEGORY_ICONS, DEFAULT_CATEGORY_ICON } from "@/lib/content-icons";
-import { ClipboardList, GraduationCap, Home, Menu, User } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { ClipboardList, Home, Menu, User } from "lucide-react";
 
 export function MobileNav({ categories }: { categories: ContentTreeNode[] }) {
   const [open, setOpen] = useState(false);
@@ -24,14 +26,26 @@ export function MobileNav({ categories }: { categories: ContentTreeNode[] }) {
       <SheetContent side="left" className="w-3/4 sm:max-w-xs">
         <SheetHeader>
           <SheetTitle className="flex items-center justify-between gap-1.5">
-            <span className="flex items-center gap-1.5">
-              <GraduationCap className="size-5 text-primary" /> EnglishHero101
-            </span>
+            <BrandLogo />
             <ThemeToggle className="flex size-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground" />
           </SheetTitle>
         </SheetHeader>
         <nav className="flex flex-col gap-1 px-4">
           <SearchBox className="mb-4" />
+          <SheetClose
+            nativeButton={false}
+            render={
+              <Link
+                href="/register"
+                className={cn(
+                  buttonVariants(),
+                  "mb-2 rounded-full bg-brand-orange text-brand-orange-foreground hover:bg-brand-orange/90",
+                )}
+              />
+            }
+          >
+            Sign Up Free
+          </SheetClose>
           <SheetClose
             nativeButton={false}
             render={

@@ -11,7 +11,7 @@ import { ChevronDown } from "lucide-react";
 import type { ContentTreeNode } from "@/types/content";
 
 const linkClassName =
-  "flex shrink-0 items-center gap-0.5 rounded-lg px-1 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground data-popup-open:bg-muted data-popup-open:text-foreground";
+  "flex shrink-0 items-center gap-0.5 rounded-lg px-2 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-brand-navy/5 hover:text-brand-navy dark:hover:text-white data-popup-open:bg-brand-navy/5 data-popup-open:text-brand-navy dark:data-popup-open:text-white";
 
 // A top-level nav category. Plain link when it has no published
 // children; otherwise the same link doubles as a hover-opened dropdown
