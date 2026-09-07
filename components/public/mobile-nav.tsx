@@ -16,9 +16,15 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { BrandLogo } from "@/components/public/brand-logo";
 import { CATEGORY_ICONS, DEFAULT_CATEGORY_ICON } from "@/lib/content-icons";
 import { cn } from "@/lib/utils";
-import { ClipboardList, Home, Info, Menu, Newspaper, User } from "lucide-react";
+import { ClipboardList, Home, Info, LogIn, Menu, Newspaper, User } from "lucide-react";
 
-export function MobileNav({ categories }: { categories: ContentTreeNode[] }) {
+export function MobileNav({
+  categories,
+  isLoggedIn,
+}: {
+  categories: ContentTreeNode[];
+  isLoggedIn: boolean;
+}) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -32,20 +38,22 @@ export function MobileNav({ categories }: { categories: ContentTreeNode[] }) {
         </SheetHeader>
         <nav className="flex flex-col gap-1 px-4">
           <SearchBox className="mb-4" />
-          <SheetClose
-            nativeButton={false}
-            render={
-              <Link
-                href="/register"
-                className={cn(
-                  buttonVariants(),
-                  "mb-2 rounded-full bg-brand-orange text-brand-orange-foreground hover:bg-brand-orange/90",
-                )}
-              />
-            }
-          >
-            Sign Up Free
-          </SheetClose>
+          {!isLoggedIn && (
+            <SheetClose
+              nativeButton={false}
+              render={
+                <Link
+                  href="/register"
+                  className={cn(
+                    buttonVariants(),
+                    "mb-2 rounded-full bg-brand-orange text-brand-orange-foreground hover:bg-brand-orange/90",
+                  )}
+                />
+              }
+            >
+              Sign Up Free
+            </SheetClose>
+          )}
           <SheetClose
             nativeButton={false}
             render={
@@ -130,17 +138,31 @@ export function MobileNav({ categories }: { categories: ContentTreeNode[] }) {
           >
             <Info className="size-4 text-muted-foreground" /> About
           </SheetClose>
-          <SheetClose
-            nativeButton={false}
-            render={
-              <Link
-                href="/profile"
-                className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-sm font-medium hover:bg-muted"
-              />
-            }
-          >
-            <User className="size-4 text-muted-foreground" /> Login / Profile
-          </SheetClose>
+          {isLoggedIn ? (
+            <SheetClose
+              nativeButton={false}
+              render={
+                <Link
+                  href="/profile"
+                  className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-sm font-medium hover:bg-muted"
+                />
+              }
+            >
+              <User className="size-4 text-muted-foreground" /> My Profile
+            </SheetClose>
+          ) : (
+            <SheetClose
+              nativeButton={false}
+              render={
+                <Link
+                  href="/login"
+                  className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-sm font-medium hover:bg-muted"
+                />
+              }
+            >
+              <LogIn className="size-4 text-muted-foreground" /> Login
+            </SheetClose>
+          )}
         </nav>
       </SheetContent>
       <Button

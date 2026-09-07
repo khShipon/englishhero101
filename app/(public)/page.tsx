@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Suspense } from "react";
 import { getChildren } from "@/lib/queries/content";
 import { getFeaturedLessons, getRecentPublishedLessons } from "@/lib/queries/lessons";
 import { getRecentVocabulary } from "@/lib/queries/vocabulary";
@@ -12,6 +13,7 @@ import { LessonCard } from "@/components/public/lesson-card";
 import { VocabularyCard } from "@/components/public/vocabulary-card";
 import { QuestionSetCard } from "@/components/public/question-set-card";
 import { RatingStars } from "@/components/public/rating-stars";
+import { FinalCta, FinalCtaFallback } from "@/components/public/final-cta";
 import { buttonVariants } from "@/components/ui/button";
 import { SITE_URL, SITE_NAME } from "@/lib/site-config";
 import { cn } from "@/lib/utils";
@@ -29,7 +31,6 @@ import {
   LayoutGrid,
   Languages,
   PlayCircle,
-  Rocket,
   Sparkles,
   Zap,
   type LucideIcon,
@@ -384,29 +385,11 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Final CTA */}
-      <section className="mx-auto w-full max-w-6xl px-4 pb-16">
-        <div className="flex flex-col items-center gap-3 rounded-2xl bg-gradient-to-br from-brand-orange/10 via-blue-50 to-background px-6 py-12 text-center dark:from-brand-orange/10 dark:via-blue-950/10">
-          <span className="flex size-11 items-center justify-center rounded-full bg-brand-navy text-white">
-            <Rocket className="size-5" />
-          </span>
-          <h2 className="text-2xl font-extrabold tracking-tight text-brand-navy dark:text-white">
-            Ready to start learning?
-          </h2>
-          <p className="max-w-md text-sm text-muted-foreground">
-            Join EnglishHero101 today and get instant access to every lesson, quiz, and vocabulary list.
-          </p>
-          <Link
-            href="/register"
-            className={cn(
-              buttonVariants({ size: "lg" }),
-              "mt-2 rounded-full bg-brand-orange px-6 text-brand-orange-foreground hover:bg-brand-orange/90",
-            )}
-          >
-            Create a free account <ArrowRight />
-          </Link>
-        </div>
-      </section>
+      {/* Final CTA — hidden behind Suspense since it reads the session
+          cookie to swap "sign up" for "welcome back" once logged in. */}
+      <Suspense fallback={<FinalCtaFallback />}>
+        <FinalCta />
+      </Suspense>
     </div>
   );
 }

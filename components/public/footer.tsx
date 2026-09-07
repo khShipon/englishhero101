@@ -1,14 +1,34 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { cacheLife } from "next/cache";
 import { getChildren } from "@/lib/queries/content";
 import { BrandLogo } from "@/components/public/brand-logo";
-import { Home, LogIn, Search } from "lucide-react";
+import {
+  FooterGetStarted,
+  FooterGetStartedFallback,
+  FooterAuthLink,
+  FooterAuthLinkFallback,
+} from "@/components/public/footer-auth";
+import { Home, Search } from "lucide-react";
 
-export async function Footer() {
+// `new Date()` is an "unstable value" under Cache Components and can't
+// be read directly in a component that isn't itself "use cache" — cache
+// just the year behind its own boundary instead (a day's staleness on
+// the footer's copyright year is a non-issue).
+async function getCopyrightYear() {
   "use cache";
   cacheLife("days");
+  return new Date().getFullYear();
+}
 
-  const categories = await getChildren(null);
+// Not "use cache" itself (unlike the old version of this component) —
+// getChildren() below is already cached internally (see
+// lib/queries/content.ts), and the two auth-aware pieces need to read
+// the session cookie behind their own Suspense boundaries, which only
+// works when they aren't nested inside a parent "use cache" scope.
+// Same shape as Navbar/AuthLink.
+export async function Footer() {
+  const [categories, year] = await Promise.all([getChildren(null), getCopyrightYear()]);
 
   return (
     <footer className="border-t border-white/10 bg-brand-navy text-white/70">
@@ -61,23 +81,14 @@ export async function Footer() {
           </div>
         )}
 
-        <div className="flex flex-col gap-3">
-          <h3 className="text-sm font-semibold text-white">Get Started</h3>
-          <p className="text-sm text-white/60">
-            Create a free account to track your progress and save your favorite lessons.
-          </p>
-          <Link
-            href="/register"
-            className="inline-flex w-fit items-center rounded-full bg-brand-orange px-4 py-2 text-sm font-medium text-brand-orange-foreground hover:bg-brand-orange/90"
-          >
-            Sign Up Free
-          </Link>
-        </div>
+        <Suspense fallback={<FooterGetStartedFallback />}>
+          <FooterGetStarted />
+        </Suspense>
       </div>
 
       <div className="border-t border-white/10">
         <div className="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-5 text-sm text-white/50 sm:flex-row sm:items-center sm:justify-between">
-          <p>&copy; {new Date().getFullYear()} EnglishHero101. All rights reserved.</p>
+          <p>&copy; {year} EnglishHero101. All rights reserved.</p>
           <nav className="flex items-center gap-4">
             <Link href="/" className="flex items-center gap-1.5 hover:text-white">
               <Home className="size-3.5" /> Home
@@ -85,9 +96,9 @@ export async function Footer() {
             <Link href="/search" className="flex items-center gap-1.5 hover:text-white">
               <Search className="size-3.5" /> Search
             </Link>
-            <Link href="/login" className="flex items-center gap-1.5 hover:text-white">
-              <LogIn className="size-3.5" /> Login
-            </Link>
+            <Suspense fallback={<FooterAuthLinkFallback />}>
+              <FooterAuthLink />
+            </Suspense>
           </nav>
         </div>
       </div>

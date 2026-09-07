@@ -56,6 +56,15 @@ function AuthLinkFallback() {
   );
 }
 
+// MobileNav is a client component (needs the Sheet's open/close
+// state), so it can't read the session cookie itself — this fetches
+// it server-side and passes down a plain boolean, isolated behind its
+// own Suspense boundary for the same reason as AuthLink above.
+async function MobileNavAuth({ categories }: { categories: Awaited<ReturnType<typeof getPublishedContentTree>> }) {
+  const user = await getCurrentUser();
+  return <MobileNav categories={categories} isLoggedIn={!!user} />;
+}
+
 export async function Navbar() {
   // Roots of the published tree — same top-level categories getChildren(null)
   // used to return, but with each category's own children attached so the
@@ -66,7 +75,9 @@ export async function Navbar() {
   return (
     <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur-xs supports-backdrop-filter:bg-background/60">
       <div className="mx-auto flex h-16 max-w-[1800px] items-center gap-2 px-3 lg:px-4 2xl:gap-3 2xl:px-6">
-        <MobileNav categories={categories} />
+        <Suspense fallback={<MobileNav categories={categories} isLoggedIn={false} />}>
+          <MobileNavAuth categories={categories} />
+        </Suspense>
         <Link href="/">
           <BrandLogo />
         </Link>
