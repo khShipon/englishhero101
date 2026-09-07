@@ -5,11 +5,13 @@ import { getFeaturedLessons, getRecentPublishedLessons } from "@/lib/queries/les
 import { getRecentVocabulary } from "@/lib/queries/vocabulary";
 import { getRecentPublishedQuestionSets } from "@/lib/queries/question-banks";
 import { getPublicSiteStats } from "@/lib/queries/site-stats";
+import { getRatingSummary } from "@/lib/queries/ratings";
 import { SearchBox } from "@/components/public/search-box";
 import { CategoryCard } from "@/components/public/category-card";
 import { LessonCard } from "@/components/public/lesson-card";
 import { VocabularyCard } from "@/components/public/vocabulary-card";
 import { QuestionSetCard } from "@/components/public/question-set-card";
+import { RatingStars } from "@/components/public/rating-stars";
 import { buttonVariants } from "@/components/ui/button";
 import { SITE_URL, SITE_NAME } from "@/lib/site-config";
 import { cn } from "@/lib/utils";
@@ -124,8 +126,23 @@ function StatItem({ icon: Icon, value, label }: { icon: LucideIcon; value: numbe
   );
 }
 
+function RatingStatItem({ average, count }: { average: number; count: number }) {
+  return (
+    <Link
+      href="/reviews"
+      className="flex flex-col items-center gap-1 text-center sm:items-start sm:text-left"
+    >
+      <RatingStars value={average} className="size-4" />
+      <span className="text-2xl font-extrabold text-white">{average.toFixed(1)}/5</span>
+      <span className="text-xs text-white/70 underline-offset-2 hover:underline">
+        {count} student {count === 1 ? "review" : "reviews"}
+      </span>
+    </Link>
+  );
+}
+
 export default async function HomePage() {
-  const [categories, featuredLessons, recentLessons, vocabulary, questionSets, stats] =
+  const [categories, featuredLessons, recentLessons, vocabulary, questionSets, stats, ratingSummary] =
     await Promise.all([
       getChildren(null),
       getFeaturedLessons(4),
@@ -133,6 +150,7 @@ export default async function HomePage() {
       getRecentVocabulary(8),
       getRecentPublishedQuestionSets(4),
       getPublicSiteStats(),
+      getRatingSummary(),
     ]);
 
   const publishedCategories = categories.filter((category) => category.isPublished);
@@ -348,11 +366,14 @@ export default async function HomePage() {
       {/* Stats + quote */}
       <section className="mx-auto w-full max-w-6xl px-4 py-6">
         <div className="grid gap-8 rounded-2xl bg-gradient-to-br from-brand-navy to-[#0d1a33] px-6 py-10 text-white sm:grid-cols-2 lg:grid-cols-[1fr_auto] lg:items-center lg:gap-12">
-          <div className="grid grid-cols-2 gap-6 sm:grid-cols-4">
+          <div className={cn("grid grid-cols-2 gap-6 sm:grid-cols-4", ratingSummary.count > 0 && "lg:grid-cols-5")}>
             <StatItem icon={LayoutGrid} value={stats.categories} label="Topics Covered" />
             <StatItem icon={BookOpen} value={stats.lessons} label="Lessons" />
             <StatItem icon={Languages} value={stats.vocabulary} label="Vocabulary Words" />
             <StatItem icon={ClipboardList} value={stats.questions} label="Practice Questions" />
+            {ratingSummary.count > 0 && (
+              <RatingStatItem average={ratingSummary.average} count={ratingSummary.count} />
+            )}
           </div>
           <blockquote className="max-w-xs border-t border-white/20 pt-6 text-sm text-white/80 italic lg:border-t-0 lg:border-l lg:pt-0 lg:pl-8">
             &ldquo;Good English doesn&apos;t just open doors, it creates new ones.&rdquo;

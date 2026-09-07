@@ -12,6 +12,9 @@ import { buttonVariants } from "@/components/ui/button";
 import { User } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+const navLinkClassName =
+  "flex shrink-0 items-center rounded-lg px-2 py-1.5 text-sm font-medium text-muted-foreground hover:bg-brand-navy/5 hover:text-brand-navy dark:hover:text-white";
+
 // Reads the session cookie, so it's the one part of the navbar that
 // can't be part of the static shell — isolated behind its own
 // Suspense boundary (see AuthLink below) so the categories list and
@@ -76,21 +79,21 @@ export async function Navbar() {
             defensive fallback for an admin adding enough top-level
             categories to overflow even that. */}
         <nav className="hidden min-w-0 flex-1 items-center justify-center overflow-x-auto lg:flex">
-          <Link
-            href="/"
-            className="flex shrink-0 items-center rounded-lg px-2 py-1.5 text-sm font-medium text-muted-foreground hover:bg-brand-navy/5 hover:text-brand-navy dark:hover:text-white"
-          >
+          <Link href="/" className={navLinkClassName}>
             Home
           </Link>
-          <Link
-            href="/question-banks"
-            className="flex shrink-0 items-center rounded-lg px-2 py-1.5 text-sm font-medium text-muted-foreground hover:bg-brand-navy/5 hover:text-brand-navy dark:hover:text-white"
-          >
+          <Link href="/question-banks" className={navLinkClassName}>
             Question Banks
           </Link>
           {categories.map((category) => (
             <NavCategoryLink key={category.id} category={category} />
           ))}
+          <Link href="/blog" className={navLinkClassName}>
+            Blog
+          </Link>
+          <Link href="/about" className={navLinkClassName}>
+            About
+          </Link>
         </nav>
         <SearchBox className="hidden w-24 shrink-0 transition-[width] duration-200 ease-out focus-within:w-72 lg:block 2xl:w-28" />
         <ThemeToggle className="hidden shrink-0 items-center justify-center rounded-lg p-1 text-muted-foreground hover:bg-muted hover:text-foreground sm:flex" />

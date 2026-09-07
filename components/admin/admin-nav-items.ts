@@ -7,6 +7,8 @@ import {
   Settings,
   GraduationCap,
   School,
+  Newspaper,
+  Star,
 } from "lucide-react";
 
 export const ADMIN_NAV_ITEMS = [
@@ -34,6 +36,8 @@ export const ADMIN_NAV_ITEMS = [
     adminOnly: false,
   },
   { href: "/admin/vocabulary", label: "Vocabulary", icon: BookOpen, exact: false, adminOnly: false },
+  { href: "/admin/blog", label: "Blog", icon: Newspaper, exact: false, adminOnly: false },
+  { href: "/admin/reviews", label: "Reviews", icon: Star, exact: false, adminOnly: false },
   { href: "/admin/users", label: "Users", icon: Users, exact: false, adminOnly: true },
   { href: "/admin/settings", label: "Settings", icon: Settings, exact: false, adminOnly: true },
 ] as const;

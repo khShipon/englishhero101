@@ -16,7 +16,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { BrandLogo } from "@/components/public/brand-logo";
 import { CATEGORY_ICONS, DEFAULT_CATEGORY_ICON } from "@/lib/content-icons";
 import { cn } from "@/lib/utils";
-import { ClipboardList, Home, Menu, User } from "lucide-react";
+import { ClipboardList, Home, Info, Menu, Newspaper, User } from "lucide-react";
 
 export function MobileNav({ categories }: { categories: ContentTreeNode[] }) {
   const [open, setOpen] = useState(false);
@@ -108,6 +108,28 @@ export function MobileNav({ categories }: { categories: ContentTreeNode[] }) {
               </div>
             );
           })}
+          <SheetClose
+            nativeButton={false}
+            render={
+              <Link
+                href="/blog"
+                className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-sm font-medium hover:bg-muted"
+              />
+            }
+          >
+            <Newspaper className="size-4 text-muted-foreground" /> Blog
+          </SheetClose>
+          <SheetClose
+            nativeButton={false}
+            render={
+              <Link
+                href="/about"
+                className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-sm font-medium hover:bg-muted"
+              />
+            }
+          >
+            <Info className="size-4 text-muted-foreground" /> About
+          </SheetClose>
           <SheetClose
             nativeButton={false}
             render={

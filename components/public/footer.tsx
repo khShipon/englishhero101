@@ -33,6 +33,15 @@ export async function Footer() {
             <Link href="/vocabulary" className="hover:text-white">
               Vocabulary
             </Link>
+            <Link href="/blog" className="hover:text-white">
+              Blog
+            </Link>
+            <Link href="/about" className="hover:text-white">
+              About
+            </Link>
+            <Link href="/reviews" className="hover:text-white">
+              Reviews
+            </Link>
             <Link href="/search" className="hover:text-white">
               Search
             </Link>
