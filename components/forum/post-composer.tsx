@@ -2,13 +2,14 @@
 
 import { useActionState, useEffect, useRef } from "react";
 import { createPost, type ForumFormState } from "@/lib/forum/post-actions";
+import { avatarColorClass } from "@/lib/avatar-color";
 import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 // Facebook's "What's on your mind?" composer, at the top of the feed.
-export function PostComposer({ authorInitials }: { authorInitials: string }) {
+export function PostComposer({ authorId, authorInitials }: { authorId: string; authorInitials: string }) {
   const [state, formAction, pending] = useActionState<ForumFormState, FormData>(createPost, undefined);
   const formRef = useRef<HTMLFormElement>(null);
   const wasPending = useRef(false);
@@ -24,7 +25,12 @@ export function PostComposer({ authorInitials }: { authorInitials: string }) {
     <Card>
       <CardContent>
         <form ref={formRef} action={formAction} className="flex gap-3">
-          <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-brand-navy text-sm font-semibold text-white">
+          <span
+            className={cn(
+              "flex size-10 shrink-0 items-center justify-center rounded-full text-sm font-semibold text-white",
+              avatarColorClass(authorId),
+            )}
+          >
             {authorInitials}
           </span>
           <div className="flex flex-1 flex-col gap-2">

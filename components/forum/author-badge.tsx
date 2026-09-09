@@ -1,4 +1,5 @@
 import { formatRelativeTime } from "@/lib/forum/format";
+import { avatarColorClass } from "@/lib/avatar-color";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import type { ForumAuthor } from "@/lib/queries/forum";
@@ -19,7 +20,8 @@ export function AuthorBadge({
     <div className="flex min-w-0 items-center gap-2.5">
       <span
         className={cn(
-          "flex shrink-0 items-center justify-center rounded-full bg-brand-navy font-semibold text-white",
+          "flex shrink-0 items-center justify-center rounded-full font-semibold text-white",
+          avatarColorClass(author.id),
           size === "sm" ? "size-8 text-xs" : "size-10 text-sm",
         )}
       >

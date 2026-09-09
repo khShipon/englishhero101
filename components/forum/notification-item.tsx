@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { formatRelativeTime } from "@/lib/forum/format";
+import { avatarColorClass } from "@/lib/avatar-color";
 import type { ForumNotification } from "@/lib/queries/forum-notifications";
 import { cn } from "@/lib/utils";
 import { MessageCircle, ThumbsUp, Heart } from "lucide-react";
@@ -31,7 +32,12 @@ export function NotificationItem({ notification }: { notification: ForumNotifica
         !notification.isRead && "border-brand-orange/30 bg-brand-orange/5",
       )}
     >
-      <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-brand-navy text-xs font-semibold text-white">
+      <span
+        className={cn(
+          "flex size-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold text-white",
+          avatarColorClass(notification.actorId),
+        )}
+      >
         {notification.actorInitials}
       </span>
       <span className="flex min-w-0 flex-1 items-start gap-2">

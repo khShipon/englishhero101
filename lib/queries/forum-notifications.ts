@@ -9,6 +9,7 @@ export type NotificationType = "reply_to_post" | "reply_to_reply" | "reaction_po
 export type ForumNotification = {
   id: string;
   type: NotificationType;
+  actorId: string;
   actorName: string;
   actorInitials: string;
   reactionType: ReactionType | null;
@@ -51,6 +52,7 @@ export const getNotifications = cache(async (limit = 20): Promise<ForumNotificat
     return {
       id: row.id,
       type: row.type as NotificationType,
+      actorId: row.actor_id,
       actorName: displayName(fullName),
       actorInitials: initialsFromName(fullName),
       reactionType: row.reaction_type as ReactionType | null,

@@ -42,7 +42,7 @@ export default async function ForumPage({
         </p>
       </div>
 
-      <PostComposer authorInitials={authorInitials} />
+      <PostComposer authorId={user.id} authorInitials={authorInitials} />
 
       <div className="flex flex-col gap-4">
         {posts.length === 0 ? (
