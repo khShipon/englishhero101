@@ -7,6 +7,7 @@ import {
   type QuestionSetFormState,
 } from "@/lib/admin/question-bank-actions";
 import type { ParentOption } from "@/lib/admin/parent-options";
+import { BOARD_SUGGESTIONS } from "@/lib/admin/boards";
 import type { QuestionSet } from "@/lib/queries/question-banks";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,23 +20,6 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 
 const EXAM_TYPE_SUGGESTIONS = ["SSC", "HSC", "IELTS"];
 const SUBJECT_SUGGESTIONS = ["English 1st Paper", "English 2nd Paper"];
-// The 8 general education boards plus Madrasah and Technical — still
-// free text (not a hard enum) so nothing already saved ever becomes
-// invalid, this just keeps new entries consistent enough for the
-// board/year filters on /question-banks to actually work.
-const BOARD_SUGGESTIONS = [
-  "Dhaka Board",
-  "Rajshahi Board",
-  "Chattogram Board",
-  "Cumilla Board",
-  "Barishal Board",
-  "Jashore Board",
-  "Sylhet Board",
-  "Dinajpur Board",
-  "Mymensingh Board",
-  "Madrasah Board",
-  "Technical Board",
-];
 
 // Base UI's Select.Value shows the raw stored value unless Select.Root
 // is given an items map to resolve labels from — see components/ui/select.tsx.
@@ -55,7 +39,7 @@ export function QuestionSetForm({
   mode: "create" | "edit";
   questionSetId?: string;
   parentOptions: ParentOption[];
-  defaultValues?: QuestionSet;
+  defaultValues?: Partial<QuestionSet>;
 }) {
   const action = mode === "create" ? createQuestionSet : updateQuestionSet;
   const [state, formAction, pending] = useActionState<QuestionSetFormState, FormData>(action, undefined);

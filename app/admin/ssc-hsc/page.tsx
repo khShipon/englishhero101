@@ -1,9 +1,16 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getSubjectOverview, type SubjectSectionSummary } from "@/lib/admin/subject-overview";
+import { getBoardQuestionsData } from "@/lib/admin/board-questions-overview";
+import { BoardQuestionsManager } from "@/components/admin/board-questions-manager";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Plus, ChevronDown } from "lucide-react";
+
+// "Board Questions" gets its own richer year/board manager below
+// instead of a plain item-count card, so it's pulled out of the
+// generic section grid.
+const BOARD_QUESTIONS_SLUG = "board-questions";
 
 export const metadata: Metadata = { title: "SSC / HSC — Admin — EnglishHero101" };
 
@@ -84,10 +91,15 @@ function SectionCard({ section }: { section: SubjectSectionSummary }) {
 }
 
 export default async function SscHscAdminHubPage() {
-  const [ssc, hsc] = await Promise.all(BOARDS.map((board) => getSubjectOverview(board.rootSlug)));
+  const [ssc, hsc, sscBoardQuestions, hscBoardQuestions] = await Promise.all([
+    getSubjectOverview(BOARDS[0].rootSlug),
+    getSubjectOverview(BOARDS[1].rootSlug),
+    getBoardQuestionsData(BOARDS[0].rootSlug),
+    getBoardQuestionsData(BOARDS[1].rootSlug),
+  ]);
   const overviews = [
-    { ...BOARDS[0], sections: ssc },
-    { ...BOARDS[1], sections: hsc },
+    { ...BOARDS[0], sections: ssc, boardQuestions: sscBoardQuestions },
+    { ...BOARDS[1], sections: hsc, boardQuestions: hscBoardQuestions },
   ];
 
   return (
@@ -108,11 +120,18 @@ export default async function SscHscAdminHubPage() {
             </p>
           ) : (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-              {board.sections.map((section) => (
-                <SectionCard key={section.nodeId} section={section} />
-              ))}
+              {board.sections
+                .filter((section) => section.slug !== BOARD_QUESTIONS_SLUG)
+                .map((section) => (
+                  <SectionCard key={section.nodeId} section={section} />
+                ))}
             </div>
           )}
+          <BoardQuestionsManager
+            examType={board.boardQuestions.examType}
+            sectionNodeId={board.boardQuestions.sectionNodeId}
+            questionSets={board.boardQuestions.questionSets}
+          />
         </div>
       ))}
     </div>
