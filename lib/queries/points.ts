@@ -1,7 +1,7 @@
 import "server-only";
 import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
-import { getTierInfo } from "@/lib/gamification/tiers";
+import { getTierInfo, TIERS } from "@/lib/gamification/tiers";
 
 // Points are computed from current state (not an accumulated ledger),
 // so toggling a lesson's completion off and back on, or retaking a
@@ -66,4 +66,64 @@ export const getUserPoints = cache(async (): Promise<UserPoints | null> => {
     pointsToNextTier: next ? next.min - points : null,
     progressPercent: next ? Math.round(((points - tier.min) / (next.min - tier.min)) * 100) : 100,
   };
+});
+
+// Batch version of the tier half of getUserPoints(), for showing a
+// "level" badge next to each distinct author on a page (e.g. a forum
+// feed) without one query per post. Missing ids (nothing completed
+// yet) come back as "Beginner", same default getUserPoints() gives a
+// brand-new user.
+export const getTierNamesForUsers = cache(async (userIds: string[]): Promise<Map<string, string>> => {
+  const uniqueIds = [...new Set(userIds)];
+  const result = new Map(uniqueIds.map((id) => [id, TIERS[0].name]));
+  if (uniqueIds.length === 0) return result;
+
+  const supabase = await createClient();
+  const [
+    { data: lessonRows, error: lessonError },
+    { data: quizRows, error: quizError },
+    { data: levelTestRows, error: levelTestError },
+  ] = await Promise.all([
+    supabase
+      .from("lesson_progress")
+      .select("user_id")
+      .eq("completed", true)
+      .in("user_id", uniqueIds),
+    supabase
+      .from("quiz_attempts")
+      .select("user_id, question_set_id, percent")
+      .in("user_id", uniqueIds),
+    supabase.from("level_test_results").select("user_id").in("user_id", uniqueIds),
+  ]);
+  if (lessonError) throw lessonError;
+  if (quizError) throw quizError;
+  if (levelTestError) throw levelTestError;
+
+  const lessonPointsByUser = new Map<string, number>();
+  for (const row of lessonRows ?? []) {
+    lessonPointsByUser.set(row.user_id, (lessonPointsByUser.get(row.user_id) ?? 0) + POINTS_PER_COMPLETED_LESSON);
+  }
+
+  const bestPercentByUserAndSet = new Map<string, Map<string, number>>();
+  for (const row of quizRows ?? []) {
+    const bySet = bestPercentByUserAndSet.get(row.user_id) ?? new Map<string, number>();
+    const current = bySet.get(row.question_set_id) ?? 0;
+    if (row.percent > current) bySet.set(row.question_set_id, row.percent);
+    bestPercentByUserAndSet.set(row.user_id, bySet);
+  }
+
+  const leveledUserIds = new Set((levelTestRows ?? []).map((row) => row.user_id));
+
+  for (const userId of uniqueIds) {
+    const lessonPoints = lessonPointsByUser.get(userId) ?? 0;
+    const quizPoints = [...(bestPercentByUserAndSet.get(userId)?.values() ?? [])].reduce(
+      (sum, percent) => sum + Math.round(percent / 20),
+      0,
+    );
+    const levelTestPoints = leveledUserIds.has(userId) ? LEVEL_TEST_BONUS : 0;
+    const { tier } = getTierInfo(lessonPoints + quizPoints + levelTestPoints);
+    result.set(userId, tier.name);
+  }
+
+  return result;
 });

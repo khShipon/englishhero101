@@ -102,6 +102,9 @@ export async function Navbar() {
           <Link href="/blog" className={navLinkClassName}>
             Blog
           </Link>
+          <Link href="/forum" className={navLinkClassName}>
+            Forum
+          </Link>
           <Link href="/about" className={navLinkClassName}>
             About
           </Link>

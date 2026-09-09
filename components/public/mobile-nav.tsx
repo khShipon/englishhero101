@@ -16,7 +16,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { BrandLogo } from "@/components/public/brand-logo";
 import { CATEGORY_ICONS, DEFAULT_CATEGORY_ICON } from "@/lib/content-icons";
 import { cn } from "@/lib/utils";
-import { ClipboardList, Home, Info, LogIn, Menu, Newspaper, User } from "lucide-react";
+import { ClipboardList, Home, Info, LogIn, Menu, MessagesSquare, Newspaper, User } from "lucide-react";
 
 export function MobileNav({
   categories,
@@ -126,6 +126,17 @@ export function MobileNav({
             }
           >
             <Newspaper className="size-4 text-muted-foreground" /> Blog
+          </SheetClose>
+          <SheetClose
+            nativeButton={false}
+            render={
+              <Link
+                href="/forum"
+                className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-sm font-medium hover:bg-muted"
+              />
+            }
+          >
+            <MessagesSquare className="size-4 text-muted-foreground" /> Forum
           </SheetClose>
           <SheetClose
             nativeButton={false}

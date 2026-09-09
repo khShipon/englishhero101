@@ -7,8 +7,11 @@ import { getSpokenCourseProgress } from "@/lib/queries/course-progress";
 import { getLatestLevelTestResult } from "@/lib/queries/level-test";
 import { getUserPoints } from "@/lib/queries/points";
 import { getFeaturedLessons, getLessonsByDifficulty } from "@/lib/queries/lessons";
+import { getNotifications, getUnreadNotificationCount } from "@/lib/queries/forum-notifications";
+import { markAllNotificationsRead } from "@/lib/forum/notification-actions";
 import { WelcomeBanner } from "@/components/public/welcome-banner";
 import { LessonCard } from "@/components/public/lesson-card";
+import { NotificationItem } from "@/components/forum/notification-item";
 import {
   Card,
   CardAction,
@@ -22,6 +25,7 @@ import { cn } from "@/lib/utils";
 import {
   ArrowRight,
   Award,
+  Bell,
   BookOpen,
   Bookmark,
   ClipboardList,
@@ -29,6 +33,7 @@ import {
   GraduationCap,
   LayoutGrid,
   Languages,
+  MessagesSquare,
   Newspaper,
   Rocket,
   Settings,
@@ -175,7 +180,7 @@ export default async function ProfilePage({
 }) {
   const [user, { welcome }] = await Promise.all([requireUser(), searchParams]);
 
-  const [continueLearning, bookmarks, completed, courseProgress, levelTestResult, points] =
+  const [continueLearning, bookmarks, completed, courseProgress, levelTestResult, points, notifications, unreadCount] =
     await Promise.all([
       getContinueLearning(),
       getUserBookmarks(),
@@ -183,6 +188,8 @@ export default async function ProfilePage({
       getSpokenCourseProgress(),
       getLatestLevelTestResult(),
       getUserPoints(),
+      getNotifications(10),
+      getUnreadNotificationCount(),
     ]);
 
   const recommendedLessons = levelTestResult
@@ -377,8 +384,34 @@ export default async function ProfilePage({
 
         {/* Sidebar */}
         <div className="flex flex-col gap-6">
+          <DashboardCard
+            icon={Bell}
+            iconClassName="bg-brand-orange/10 text-brand-orange"
+            title="Notifications"
+            action={
+              unreadCount > 0 && (
+                <form action={markAllNotificationsRead}>
+                  <button type="submit" className="text-xs font-medium text-brand-orange hover:underline">
+                    Mark all as read
+                  </button>
+                </form>
+              )
+            }
+          >
+            {notifications.length === 0 ? (
+              <p className="py-2 text-sm text-muted-foreground">
+                No notifications yet — replies and reactions on your forum posts will show up here.
+              </p>
+            ) : (
+              notifications.map((notification) => (
+                <NotificationItem key={notification.id} notification={notification} />
+              ))
+            )}
+          </DashboardCard>
+
           <DashboardCard icon={LayoutGrid} iconClassName="bg-brand-navy/10 text-brand-navy dark:bg-brand-blue/15 dark:text-brand-blue" title="Explore more">
             <QuickLink href="/" icon={LayoutGrid} iconClassName="bg-blue-600" title="Browse categories" subtitle="SSC, HSC, IELTS & more" />
+            <QuickLink href="/forum" icon={MessagesSquare} iconClassName="bg-teal-600" title="Forum" subtitle="Ask & discuss with classmates" />
             <QuickLink href="/vocabulary" icon={Languages} iconClassName="bg-pink-500" title="Vocabulary" subtitle="Grow your word bank" />
             <QuickLink href="/question-banks" icon={ClipboardList} iconClassName="bg-sky-600" title="Practice tests" subtitle="Get exam ready" />
             <QuickLink href="/blog" icon={Newspaper} iconClassName="bg-purple-600" title="Blog" subtitle="Tips & study guides" />
