@@ -11,30 +11,162 @@ import { WelcomeBanner } from "@/components/public/welcome-banner";
 import { LessonCard } from "@/components/public/lesson-card";
 import {
   Card,
+  CardAction,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
 import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import {
+  ArrowRight,
   Award,
   BookOpen,
   Bookmark,
+  ClipboardList,
   CircleCheckBig,
   GraduationCap,
+  LayoutGrid,
+  Languages,
+  Newspaper,
   Rocket,
   Settings,
   Sparkles,
   TrendingUp,
+  type LucideIcon,
 } from "lucide-react";
 
-export const metadata: Metadata = { title: "Your profile — EnglishHero101" };
+export const metadata: Metadata = { title: "Your dashboard — EnglishHero101" };
 
 // Entirely per-user (progress, bookmarks) — no static shell to gain
 // here, so it opts out of Cache Components validation rather than
 // being carved up with Suspense boundaries for no benefit.
 export const instant = false;
+
+function initials(fullName: string | null, email: string) {
+  if (fullName?.trim()) {
+    const parts = fullName.trim().split(/\s+/);
+    return (parts[0][0] + (parts[1]?.[0] ?? "")).toUpperCase();
+  }
+  return email[0]?.toUpperCase() ?? "?";
+}
+
+function StatCard({
+  icon: Icon,
+  iconClassName,
+  value,
+  label,
+}: {
+  icon: LucideIcon;
+  iconClassName: string;
+  value: React.ReactNode;
+  label: string;
+}) {
+  return (
+    <div className="flex items-center gap-3 rounded-xl bg-card p-3.5 ring-1 ring-foreground/10 transition-shadow hover:shadow-md sm:p-4">
+      <span className={cn("flex size-10 shrink-0 items-center justify-center rounded-full text-white", iconClassName)}>
+        <Icon className="size-5" />
+      </span>
+      <div className="min-w-0">
+        <p className="truncate text-lg font-bold leading-tight">{value}</p>
+        <p className="truncate text-xs text-muted-foreground">{label}</p>
+      </div>
+    </div>
+  );
+}
+
+function DashboardCard({
+  icon: Icon,
+  iconClassName = "bg-brand-navy/10 text-brand-navy dark:bg-brand-blue/15 dark:text-brand-blue",
+  title,
+  description,
+  action,
+  children,
+}: {
+  icon: LucideIcon;
+  iconClassName?: string;
+  title: string;
+  description?: React.ReactNode;
+  action?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-base">
+          <span className={cn("flex size-8 shrink-0 items-center justify-center rounded-lg", iconClassName)}>
+            <Icon className="size-4" />
+          </span>
+          {title}
+        </CardTitle>
+        {description && <CardDescription>{description}</CardDescription>}
+        {action && <CardAction>{action}</CardAction>}
+      </CardHeader>
+      <CardContent className="flex flex-col gap-2.5">{children}</CardContent>
+    </Card>
+  );
+}
+
+function LessonListItem({
+  href,
+  title,
+  progressPercent,
+}: {
+  href: string;
+  title: string;
+  progressPercent?: number;
+}) {
+  return (
+    <Link
+      href={href}
+      className="group flex items-center gap-3 rounded-lg border px-3 py-2.5 text-sm font-medium transition-colors hover:border-brand-orange/40 hover:bg-muted/50"
+    >
+      <span className="min-w-0 flex-1 truncate">{title}</span>
+      {typeof progressPercent === "number" && progressPercent > 0 && (
+        <span className="hidden shrink-0 items-center gap-1.5 sm:flex">
+          <span className="h-1.5 w-16 overflow-hidden rounded-full bg-muted">
+            <span
+              className="block h-full rounded-full bg-brand-orange"
+              style={{ width: `${progressPercent}%` }}
+            />
+          </span>
+          <span className="w-8 shrink-0 text-xs text-muted-foreground">{progressPercent}%</span>
+        </span>
+      )}
+      <ArrowRight className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-brand-orange" />
+    </Link>
+  );
+}
+
+function QuickLink({
+  href,
+  icon: Icon,
+  iconClassName,
+  title,
+  subtitle,
+}: {
+  href: string;
+  icon: LucideIcon;
+  iconClassName: string;
+  title: string;
+  subtitle: string;
+}) {
+  return (
+    <Link href={href} className="group flex items-center gap-3 rounded-lg px-1 py-1.5 hover:bg-muted/50">
+      <span className={cn("flex size-9 shrink-0 items-center justify-center rounded-full text-white", iconClassName)}>
+        <Icon className="size-4" />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-sm font-semibold group-hover:text-brand-navy dark:group-hover:text-white">
+          {title}
+        </span>
+        <span className="block truncate text-xs text-muted-foreground">{subtitle}</span>
+      </span>
+      <ArrowRight className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+    </Link>
+  );
+}
 
 export default async function ProfilePage({
   searchParams,
@@ -57,230 +189,210 @@ export default async function ProfilePage({
     ? await getLessonsByDifficulty(levelTestResult.level, 4)
     : await getFeaturedLessons(4);
 
+  const hasAnyActivity =
+    (courseProgress && courseProgress.totalLessons > 0) ||
+    continueLearning.length > 0 ||
+    bookmarks.length > 0 ||
+    completed.length > 0;
+
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 px-4 py-12">
+    <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 px-4 py-8 sm:py-10">
       {welcome === "1" && <WelcomeBanner />}
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">
-            {user.fullName ? `Welcome back, ${user.fullName.split(" ")[0]}` : "Your profile"}
-          </h1>
-          <p className="text-sm text-muted-foreground">Pick up right where you left off.</p>
-        </div>
-        <Link
-          href="/settings"
-          className={buttonVariants({ variant: "outline", size: "sm", className: "shrink-0" })}
-        >
-          <Settings /> Settings
-        </Link>
-      </div>
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <div className="rounded-lg border px-3 py-2.5 text-center">
-          <p className="text-lg font-semibold">{completed.length}</p>
-          <p className="text-xs text-muted-foreground">Lessons completed</p>
-        </div>
-        <div className="rounded-lg border px-3 py-2.5 text-center">
-          <p className="text-lg font-semibold">{bookmarks.length}</p>
-          <p className="text-xs text-muted-foreground">Bookmarked</p>
-        </div>
-        <div className="rounded-lg border px-3 py-2.5 text-center">
-          <p className="text-lg font-semibold">{points?.points ?? 0}</p>
-          <p className="text-xs text-muted-foreground">Points</p>
-        </div>
-        <div className="rounded-lg border px-3 py-2.5 text-center">
-          <p className="text-lg font-semibold">{points?.tierName ?? "Beginner"}</p>
-          <p className="text-xs text-muted-foreground">Your level</p>
-        </div>
-      </div>
-
-      {points && (
-        <div className="flex flex-col gap-1.5">
-          <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
-            <div
-              className="h-full rounded-full bg-primary transition-[width]"
-              style={{ width: `${points.progressPercent}%` }}
-            />
-          </div>
-          <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <TrendingUp className="size-3.5" />
-            {points.nextTierName
-              ? `${points.pointsToNextTier} points to ${points.nextTierName} — earn points by completing lessons and quizzes`
-              : "You've reached the top tier — keep completing lessons to stay sharp"}
-          </p>
-        </div>
-      )}
-
-      {levelTestResult ? (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Award className="size-4 text-primary" /> Placement test:{" "}
-              <span className="capitalize">{levelTestResult.level}</span>
-            </CardTitle>
-            <CardDescription>
-              Score: {levelTestResult.score} / {levelTestResult.total} ({levelTestResult.percent}%)
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Link href="/level-test?retake=1" className={buttonVariants({ variant: "outline", size: "sm" })}>
-              Retake test
-            </Link>
-          </CardContent>
-        </Card>
-      ) : (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Sparkles className="size-4 text-primary" /> Test your English level
-            </CardTitle>
-            <CardDescription>
-              A quick 5-minute quiz covering grammar, vocabulary, fill-in-the-blank, and listening —
-              we&apos;ll recommend lessons matched to your level.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Link href="/level-test" className={buttonVariants({ size: "sm" })}>
-              Start the test
-            </Link>
-          </CardContent>
-        </Card>
-      )}
-
-      {recommendedLessons.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Sparkles className="size-4" />{" "}
-              {levelTestResult ? "Recommended for your level" : "Lessons you might like"}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            {recommendedLessons.map((lesson) => (
-              <LessonCard key={lesson.id} lesson={lesson} />
-            ))}
-          </CardContent>
-        </Card>
-      )}
-
-      {courseProgress && courseProgress.totalLessons > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <GraduationCap className="size-4" /> Spoken English Course
-            </CardTitle>
-            <CardDescription>
-              {courseProgress.completedLessons} / {courseProgress.totalLessons} lessons complete
-              {courseProgress.averagePercent !== null && (
-                <> · {courseProgress.averagePercent}% average practice score</>
-              )}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-4">
-            <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
-              <div
-                className="h-full rounded-full bg-primary transition-[width]"
-                style={{
-                  width: `${Math.round((courseProgress.completedLessons / courseProgress.totalLessons) * 100)}%`,
-                }}
-              />
-            </div>
-            {courseProgress.nextLesson && (
-              <Link
-                href={courseProgress.nextLesson.href}
-                className="self-start rounded-md border px-3 py-2 text-sm font-medium hover:bg-muted/50"
-              >
-                Continue: {courseProgress.nextLesson.title} →
-              </Link>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
-      {continueLearning.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <BookOpen className="size-4" /> Continue learning
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-2">
-            {continueLearning.map(({ lesson, href }) => (
-              <Link
-                key={lesson.id}
-                href={href}
-                className="rounded-md border px-3 py-2 text-sm font-medium hover:bg-muted/50"
-              >
-                {lesson.title}
-              </Link>
-            ))}
-          </CardContent>
-        </Card>
-      )}
-
-      {!(courseProgress && courseProgress.totalLessons > 0) &&
-        continueLearning.length === 0 &&
-        bookmarks.length === 0 &&
-        completed.length === 0 && (
-          <Card>
-            <CardContent className="flex flex-col items-center gap-3 py-8 text-center">
-              <span className="flex size-10 items-center justify-center rounded-full bg-primary/10 text-primary">
-                <Rocket className="size-5" />
+      {/* Hero */}
+      <section className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-brand-navy to-[#0d1a33] px-5 py-7 text-white shadow-lg sm:px-8 sm:py-8">
+        <div className="pointer-events-none absolute -top-16 -right-16 size-56 rounded-full bg-brand-orange/10 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-20 -left-10 size-56 rounded-full bg-brand-blue/20 blur-3xl" />
+        <div className="relative flex flex-col gap-5">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex items-center gap-3.5">
+              <span className="flex size-12 shrink-0 items-center justify-center rounded-full bg-white/10 text-lg font-bold ring-2 ring-white/20 sm:size-14 sm:text-xl">
+                {initials(user.fullName, user.email)}
               </span>
               <div>
-                <p className="font-medium">You haven&apos;t started a lesson yet</p>
-                <p className="text-sm text-muted-foreground">
-                  Pick a category and your progress will show up here.
-                </p>
+                <h1 className="text-xl font-extrabold tracking-tight sm:text-2xl">
+                  {user.fullName ? `Welcome back, ${user.fullName.split(" ")[0]}` : "Your dashboard"}
+                </h1>
+                <p className="mt-0.5 text-sm text-white/70">Pick up right where you left off.</p>
               </div>
-              <Link href="/" className={buttonVariants({ size: "sm" })}>
-                Browse lessons
-              </Link>
-            </CardContent>
-          </Card>
-        )}
+            </div>
+            <Link
+              href="/settings"
+              className="flex shrink-0 items-center gap-1.5 rounded-full border border-white/20 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-white/10 sm:text-sm"
+            >
+              <Settings className="size-4" /> <span className="hidden sm:inline">Settings</span>
+            </Link>
+          </div>
 
-      {bookmarks.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Bookmark className="size-4" /> Bookmarked lessons
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-2">
-            {bookmarks.map(({ lesson, href }) => (
-              <Link
-                key={lesson.id}
-                href={href}
-                className="rounded-md border px-3 py-2 text-sm font-medium hover:bg-muted/50"
-              >
-                {lesson.title}
-              </Link>
-            ))}
-          </CardContent>
-        </Card>
-      )}
+          <div className="flex flex-wrap items-center gap-3 sm:gap-4">
+            <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-brand-orange px-3 py-1 text-xs font-bold text-brand-orange-foreground">
+              <Sparkles className="size-3.5" /> {points?.tierName ?? "Beginner"}
+            </span>
+            {points && (
+              <div className="flex min-w-[180px] flex-1 items-center gap-3">
+                <div className="h-2 flex-1 overflow-hidden rounded-full bg-white/15">
+                  <div
+                    className="h-full rounded-full bg-brand-orange transition-[width]"
+                    style={{ width: `${points.progressPercent}%` }}
+                  />
+                </div>
+                <span className="flex shrink-0 items-center gap-1 text-xs font-medium text-white/80">
+                  <TrendingUp className="size-3.5" />
+                  {points.nextTierName ? `${points.pointsToNextTier} pts to ${points.nextTierName}` : "Top tier"}
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
 
-      {completed.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <CircleCheckBig className="size-4" /> Completed lessons
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-2">
-            {completed.map(({ lesson, href }) => (
-              <Link
-                key={lesson.id}
-                href={href}
-                className="rounded-md border px-3 py-2 text-sm font-medium hover:bg-muted/50"
-              >
-                {lesson.title}
-              </Link>
-            ))}
-          </CardContent>
-        </Card>
-      )}
+      {/* Stats */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <StatCard icon={CircleCheckBig} iconClassName="bg-emerald-600" value={completed.length} label="Lessons completed" />
+        <StatCard icon={Bookmark} iconClassName="bg-pink-500" value={bookmarks.length} label="Bookmarked" />
+        <StatCard icon={Award} iconClassName="bg-brand-orange" value={points?.points ?? 0} label="Points" />
+        <StatCard icon={TrendingUp} iconClassName="bg-brand-blue" value={points?.tierName ?? "Beginner"} label="Your level" />
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-3">
+        {/* Main column */}
+        <div className="flex flex-col gap-6 lg:col-span-2">
+          {levelTestResult ? (
+            <DashboardCard
+              icon={Award}
+              iconClassName="bg-brand-orange/10 text-brand-orange"
+              title={`Placement test: ${levelTestResult.level}`}
+              description={`Score: ${levelTestResult.score} / ${levelTestResult.total} (${levelTestResult.percent}%)`}
+              action={
+                <Link href="/level-test?retake=1" className={buttonVariants({ variant: "outline", size: "sm" })}>
+                  Retake test
+                </Link>
+              }
+            >
+              <p className="text-sm text-muted-foreground">
+                Lessons below are matched to your <span className="font-medium capitalize">{levelTestResult.level}</span> level.
+              </p>
+            </DashboardCard>
+          ) : (
+            <DashboardCard
+              icon={Sparkles}
+              iconClassName="bg-brand-orange/10 text-brand-orange"
+              title="Test your English level"
+              action={
+                <Link
+                  href="/level-test"
+                  className={cn(buttonVariants({ size: "sm" }), "rounded-full bg-brand-orange text-brand-orange-foreground hover:bg-brand-orange/90")}
+                >
+                  Start the test
+                </Link>
+              }
+            >
+              <p className="text-sm text-muted-foreground">
+                A quick 5-minute quiz covering grammar, vocabulary, fill-in-the-blank, and listening —
+                we&apos;ll recommend lessons matched to your level.
+              </p>
+            </DashboardCard>
+          )}
+
+          {recommendedLessons.length > 0 && (
+            <DashboardCard
+              icon={Sparkles}
+              iconClassName="bg-brand-navy/10 text-brand-navy dark:bg-brand-blue/15 dark:text-brand-blue"
+              title={levelTestResult ? "Recommended for your level" : "Lessons you might like"}
+            >
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                {recommendedLessons.map((lesson) => (
+                  <LessonCard key={lesson.id} lesson={lesson} />
+                ))}
+              </div>
+            </DashboardCard>
+          )}
+
+          {courseProgress && courseProgress.totalLessons > 0 && (
+            <DashboardCard
+              icon={GraduationCap}
+              iconClassName="bg-teal-600/10 text-teal-600"
+              title="Spoken English Course"
+              description={
+                <>
+                  {courseProgress.completedLessons} / {courseProgress.totalLessons} lessons complete
+                  {courseProgress.averagePercent !== null && (
+                    <> · {courseProgress.averagePercent}% average practice score</>
+                  )}
+                </>
+              }
+            >
+              <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+                <div
+                  className="h-full rounded-full bg-teal-600 transition-[width]"
+                  style={{
+                    width: `${Math.round((courseProgress.completedLessons / courseProgress.totalLessons) * 100)}%`,
+                  }}
+                />
+              </div>
+              {courseProgress.nextLesson && (
+                <LessonListItem href={courseProgress.nextLesson.href} title={`Continue: ${courseProgress.nextLesson.title}`} />
+              )}
+            </DashboardCard>
+          )}
+
+          {continueLearning.length > 0 && (
+            <DashboardCard icon={BookOpen} iconClassName="bg-brand-blue/10 text-brand-blue" title="Continue learning">
+              {continueLearning.map(({ lesson, href, progress }) => (
+                <LessonListItem key={lesson.id} href={href} title={lesson.title} progressPercent={progress.progressPercent} />
+              ))}
+            </DashboardCard>
+          )}
+
+          {!hasAnyActivity && (
+            <Card>
+              <CardContent className="flex flex-col items-center gap-3 py-10 text-center">
+                <span className="flex size-12 items-center justify-center rounded-full bg-brand-orange/10 text-brand-orange">
+                  <Rocket className="size-6" />
+                </span>
+                <div>
+                  <p className="font-medium">You haven&apos;t started a lesson yet</p>
+                  <p className="text-sm text-muted-foreground">
+                    Pick a category and your progress will show up here.
+                  </p>
+                </div>
+                <Link
+                  href="/"
+                  className={cn(buttonVariants({ size: "sm" }), "rounded-full bg-brand-orange text-brand-orange-foreground hover:bg-brand-orange/90")}
+                >
+                  Browse lessons
+                </Link>
+              </CardContent>
+            </Card>
+          )}
+
+          {completed.length > 0 && (
+            <DashboardCard icon={CircleCheckBig} iconClassName="bg-emerald-600/10 text-emerald-600" title="Completed lessons">
+              {completed.map(({ lesson, href }) => (
+                <LessonListItem key={lesson.id} href={href} title={lesson.title} />
+              ))}
+            </DashboardCard>
+          )}
+        </div>
+
+        {/* Sidebar */}
+        <div className="flex flex-col gap-6">
+          <DashboardCard icon={LayoutGrid} iconClassName="bg-brand-navy/10 text-brand-navy dark:bg-brand-blue/15 dark:text-brand-blue" title="Explore more">
+            <QuickLink href="/" icon={LayoutGrid} iconClassName="bg-blue-600" title="Browse categories" subtitle="SSC, HSC, IELTS & more" />
+            <QuickLink href="/vocabulary" icon={Languages} iconClassName="bg-pink-500" title="Vocabulary" subtitle="Grow your word bank" />
+            <QuickLink href="/question-banks" icon={ClipboardList} iconClassName="bg-sky-600" title="Practice tests" subtitle="Get exam ready" />
+            <QuickLink href="/blog" icon={Newspaper} iconClassName="bg-purple-600" title="Blog" subtitle="Tips & study guides" />
+          </DashboardCard>
+
+          {bookmarks.length > 0 && (
+            <DashboardCard icon={Bookmark} iconClassName="bg-pink-500/10 text-pink-500" title="Bookmarked lessons">
+              {bookmarks.map(({ lesson, href }) => (
+                <LessonListItem key={lesson.id} href={href} title={lesson.title} />
+              ))}
+            </DashboardCard>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
