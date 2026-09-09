@@ -4,6 +4,8 @@ import { ReactionBar } from "@/components/forum/reaction-bar";
 import { DeleteForm } from "@/components/forum/delete-form";
 import { deletePost } from "@/lib/forum/post-actions";
 import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 import type { ForumPostSummary } from "@/lib/queries/forum";
 import { MessageCircle } from "lucide-react";
 
@@ -17,13 +19,18 @@ export function PostCard({
   isManager?: boolean;
 }) {
   return (
-    <Card>
+    <Card className={cn(post.isNew && "ring-2 ring-brand-orange/50")}>
       <CardContent className="flex flex-col gap-3">
         <div className="flex items-start justify-between gap-3">
           <AuthorBadge author={post.author} timestamp={post.createdAt} />
-          {(post.author.id === currentUserId || isManager) && (
-            <DeleteForm action={deletePost} hiddenFields={{ postId: post.id }} label="Delete post" />
-          )}
+          <div className="flex shrink-0 items-center gap-2">
+            {post.isNew && (
+              <Badge className="bg-brand-orange text-brand-orange-foreground">New</Badge>
+            )}
+            {(post.author.id === currentUserId || isManager) && (
+              <DeleteForm action={deletePost} hiddenFields={{ postId: post.id }} label="Delete post" />
+            )}
+          </div>
         </div>
         <p className="line-clamp-6 text-sm whitespace-pre-wrap">{post.body}</p>
         <div className="flex items-center justify-between border-t pt-2.5">

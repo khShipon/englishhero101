@@ -23,6 +23,7 @@ export type ForumPostSummary = {
   loveCount: number;
   myReaction: ReactionType | null;
   replyCount: number;
+  isNew: boolean;
 };
 
 export type ForumReplyNode = {
@@ -108,13 +109,19 @@ export const getForumFeed = cache(
 
     const postIds = pageRows.map((row) => row.id);
 
-    const [authors, reactionResult, replyResult] = await Promise.all([
+    const [authors, reactionResult, replyResult, viewResult] = await Promise.all([
       getAuthors(supabase, pageRows.map((row) => row.user_id)),
       supabase.from("forum_post_reactions").select("post_id, user_id, reaction_type").in("post_id", postIds),
       supabase.from("forum_replies").select("post_id").in("post_id", postIds),
+      user
+        ? supabase.from("forum_post_views").select("post_id").eq("user_id", user.id).in("post_id", postIds)
+        : Promise.resolve({ data: [] as { post_id: string }[], error: null }),
     ]);
     if (reactionResult.error) throw reactionResult.error;
     if (replyResult.error) throw replyResult.error;
+    if (viewResult.error) throw viewResult.error;
+
+    const viewedPostIds = new Set((viewResult.data ?? []).map((row) => row.post_id));
 
     const reactionsByPost = new Map<string, ReactionAgg>();
     for (const row of reactionResult.data ?? []) {
@@ -138,6 +145,7 @@ export const getForumFeed = cache(
         loveCount: reactions.love,
         myReaction: reactions.mine,
         replyCount: replyCountByPost.get(row.id) ?? 0,
+        isNew: row.user_id !== user?.id && !viewedPostIds.has(row.id),
       };
     });
 
@@ -229,6 +237,10 @@ export const getForumPost = cache(async (postId: string): Promise<ForumPostDetai
     loveCount: postReactions.love,
     myReaction: postReactions.mine,
     replyCount: replies.length,
+    // Irrelevant on the detail page itself (TrackPostView is about to
+    // mark it seen) — present only because ForumPostDetail extends
+    // ForumPostSummary, which the feed card actually uses.
+    isNew: false,
     replies: topLevel,
   };
 });

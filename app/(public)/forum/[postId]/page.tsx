@@ -8,6 +8,7 @@ import { ReactionBar } from "@/components/forum/reaction-bar";
 import { ReplyComposer } from "@/components/forum/reply-composer";
 import { ReplyItem } from "@/components/forum/reply-item";
 import { DeletePostButton } from "@/components/forum/delete-post-button";
+import { TrackPostView } from "@/components/forum/track-post-view";
 import { Card, CardContent } from "@/components/ui/card";
 import { ArrowLeft } from "lucide-react";
 
@@ -37,6 +38,7 @@ export default async function ForumPostPage({
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 px-4 py-8 sm:py-10">
+      <TrackPostView postId={post.id} />
       <Link
         href="/forum"
         className="flex w-fit items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-brand-navy dark:hover:text-white"
