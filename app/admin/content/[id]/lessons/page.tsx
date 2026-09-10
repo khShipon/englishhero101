@@ -17,7 +17,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { DeleteLessonDialog } from "@/components/admin/lesson-editor/delete-lesson-dialog";
-import { Plus, Pencil, Eye } from "lucide-react";
+import { Plus, Pencil, Eye, Upload } from "lucide-react";
 
 export const metadata: Metadata = { title: "Lessons — Admin — EnglishHero101" };
 
@@ -53,9 +53,14 @@ export default async function NodeLessonsPage({
           </p>
           <h1 className="text-2xl font-semibold tracking-tight">Lessons</h1>
         </div>
-        <Link href={`/admin/lessons/new?node=${node.id}`} className={buttonVariants()}>
-          <Plus /> New lesson
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          <Link href="/admin/lessons/import" className={buttonVariants({ variant: "outline" })}>
+            <Upload /> Import
+          </Link>
+          <Link href={`/admin/lessons/new?node=${node.id}`} className={buttonVariants()}>
+            <Plus /> New lesson
+          </Link>
+        </div>
       </div>
 
       <Card>
