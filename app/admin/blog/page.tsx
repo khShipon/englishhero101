@@ -14,7 +14,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { DeleteBlogPostDialog } from "@/components/admin/blog/delete-blog-post-dialog";
-import { Plus, Pencil, Search, ChevronLeft, ChevronRight, ExternalLink } from "lucide-react";
+import { Plus, Pencil, Search, ChevronLeft, ChevronRight, ExternalLink, Upload } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Blog — Admin — EnglishHero101" };
@@ -45,9 +45,14 @@ export default async function AdminBlogPage({
           <h1 className="text-2xl font-semibold tracking-tight">Blog</h1>
           <p className="text-sm text-muted-foreground">{totalCount} posts.</p>
         </div>
-        <Link href="/admin/blog/new" className={buttonVariants()}>
-          <Plus /> New post
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          <Link href="/admin/blog/import" className={buttonVariants({ variant: "outline" })}>
+            <Upload /> Import
+          </Link>
+          <Link href="/admin/blog/new" className={buttonVariants()}>
+            <Plus /> New post
+          </Link>
+        </div>
       </div>
 
       <form className="flex max-w-xs items-center gap-2" action="/admin/blog">

@@ -4,7 +4,7 @@ import { getQuestionSets } from "@/lib/queries/question-banks";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { QuestionBankFilters } from "@/components/admin/question-banks/question-bank-filters";
-import { Plus } from "lucide-react";
+import { Plus, Upload } from "lucide-react";
 
 export const metadata: Metadata = { title: "Question Banks — Admin — EnglishHero101" };
 
@@ -20,9 +20,14 @@ export default async function QuestionBanksPage() {
             {questionSets.length} question set{questionSets.length === 1 ? "" : "s"}.
           </p>
         </div>
-        <Link href="/admin/question-banks/new" className={buttonVariants()}>
-          <Plus /> New question set
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          <Link href="/admin/question-banks/import" className={buttonVariants({ variant: "outline" })}>
+            <Upload /> Import
+          </Link>
+          <Link href="/admin/question-banks/new" className={buttonVariants()}>
+            <Plus /> New question set
+          </Link>
+        </div>
       </div>
 
       <Card>

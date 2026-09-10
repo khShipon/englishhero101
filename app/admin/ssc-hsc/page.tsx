@@ -5,7 +5,7 @@ import { getBoardQuestionsData } from "@/lib/admin/board-questions-overview";
 import { BoardQuestionsManager } from "@/components/admin/board-questions-manager";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, ChevronDown } from "lucide-react";
+import { Plus, ChevronDown, Upload } from "lucide-react";
 
 // "Board Questions" gets its own richer year/board manager below
 // instead of a plain item-count card, so it's pulled out of the
@@ -104,11 +104,16 @@ export default async function SscHscAdminHubPage() {
 
   return (
     <div className="flex flex-col gap-8">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">SSC / HSC</h1>
-        <p className="text-sm text-muted-foreground">
-          Manage every SSC and HSC English section, and add any exam topic, from one place.
-        </p>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">SSC / HSC</h1>
+          <p className="text-sm text-muted-foreground">
+            Manage every SSC and HSC English section, and add any exam topic, from one place.
+          </p>
+        </div>
+        <Link href="/admin/lessons/import" className={buttonVariants({ variant: "outline" })}>
+          <Upload /> Import lessons
+        </Link>
       </div>
 
       {overviews.map((board) => (

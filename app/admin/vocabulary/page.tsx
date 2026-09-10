@@ -47,7 +47,7 @@ export default async function AdminVocabularyPage({
         </div>
         <div className="flex flex-wrap gap-2">
           <Link href="/admin/vocabulary/import" className={buttonVariants({ variant: "outline" })}>
-            <Upload /> Import CSV
+            <Upload /> Import
           </Link>
           <Link href="/admin/vocabulary/new" className={buttonVariants()}>
             <Plus /> New word

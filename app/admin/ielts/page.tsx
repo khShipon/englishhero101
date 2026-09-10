@@ -3,7 +3,7 @@ import Link from "next/link";
 import { getIeltsSectionsOverview } from "@/lib/admin/ielts-overview";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { BookOpenText, Headphones, PenLine, Mic, Library } from "lucide-react";
+import { BookOpenText, Headphones, PenLine, Mic, Library, Upload } from "lucide-react";
 import type { ComponentType } from "react";
 
 export const metadata: Metadata = { title: "IELTS — Admin — EnglishHero101" };
@@ -49,9 +49,14 @@ export default async function IeltsAdminHubPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">IELTS</h1>
-        <p className="text-sm text-muted-foreground">Manage every IELTS section from one place.</p>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">IELTS</h1>
+          <p className="text-sm text-muted-foreground">Manage every IELTS section from one place.</p>
+        </div>
+        <Link href="/admin/lessons/import" className={buttonVariants({ variant: "outline" })}>
+          <Upload /> Import lessons
+        </Link>
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">

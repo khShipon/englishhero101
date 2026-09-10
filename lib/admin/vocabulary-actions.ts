@@ -13,8 +13,15 @@ import { parseCsv, MAX_CSV_SIZE_BYTES, type CsvImportState } from "@/lib/admin/c
 import {
   validateVocabularyCsvRow,
   MAX_VOCABULARY_CSV_ROWS,
+  type VocabularyCsvInsert,
   type VocabularyCsvRowResult,
 } from "@/lib/admin/vocabulary-csv";
+import {
+  validateVocabularyJsonItem,
+  normalizeVocabularyJsonPayload,
+  MAX_VOCABULARY_JSON_ITEMS,
+  type VocabularyJsonRowResult,
+} from "@/lib/admin/vocabulary-bulk-import";
 
 export type VocabularyFormState =
   | {
@@ -117,6 +124,52 @@ export async function updateVocabulary(
   redirect("/admin/vocabulary");
 }
 
+type VocabularyImportRow = { data: VocabularyCsvInsert; categorySlug: string | null };
+
+// Shared by both the CSV and JSON import actions once their rows have
+// passed field-level validation: resolves each row's category slug to
+// a node id in one batch (rather than trusting a client-supplied id
+// that could point anywhere), inserts every word, and redirects.
+async function insertValidatedVocabulary(validRows: VocabularyImportRow[]): Promise<CsvImportState> {
+  const uniqueSlugs = [
+    ...new Set(validRows.map((r) => r.categorySlug).filter((slug): slug is string => slug !== null)),
+  ];
+  const resolved = await Promise.all(
+    uniqueSlugs.map(async (slug) => ({
+      slug,
+      node: await getNodeBySlugPath(slug.split("/").filter(Boolean)),
+    })),
+  );
+  const unresolvedSlugs = resolved.filter((r) => !r.node).map((r) => r.slug);
+
+  if (unresolvedSlugs.length > 0) {
+    return {
+      error: "Some category values don't match an existing category.",
+      rowErrors: unresolvedSlugs.map(
+        (slug) => `"${slug}" not found — check the slug path (e.g. "grammar/tense").`,
+      ),
+    };
+  }
+
+  const slugToId = new Map(resolved.map((r) => [r.slug, r.node!.id]));
+
+  const supabase = await createClient();
+  const { error } = await supabase.from("vocabulary").insert(
+    validRows.map((r) => ({
+      ...r.data,
+      node_id: r.categorySlug ? (slugToId.get(r.categorySlug) ?? null) : null,
+    })),
+  );
+
+  if (error) {
+    return { error: "Import failed. Please try again." };
+  }
+
+  revalidatePath("/admin/vocabulary");
+  updateTag(VOCABULARY_TAG);
+  redirect("/admin/vocabulary");
+}
+
 export async function importVocabularyCsv(
   _state: CsvImportState,
   formData: FormData,
@@ -160,46 +213,50 @@ export async function importVocabularyCsv(
     (result): result is Extract<VocabularyCsvRowResult, { ok: true }> => result.ok,
   );
 
-  // Resolve every unique category_slug to a node id in one batch,
-  // rather than trusting client-supplied ids that could point
-  // anywhere.
-  const uniqueSlugs = [
-    ...new Set(validRows.map((r) => r.categorySlug).filter((slug): slug is string => slug !== null)),
-  ];
-  const resolved = await Promise.all(
-    uniqueSlugs.map(async (slug) => ({
-      slug,
-      node: await getNodeBySlugPath(slug.split("/").filter(Boolean)),
-    })),
-  );
-  const unresolvedSlugs = resolved.filter((r) => !r.node).map((r) => r.slug);
+  return insertValidatedVocabulary(validRows);
+}
 
-  if (unresolvedSlugs.length > 0) {
+export async function importVocabularyJson(
+  _state: CsvImportState,
+  formData: FormData,
+): Promise<CsvImportState> {
+  await requireRole(["admin", "editor"]);
+
+  let raw: unknown;
+  try {
+    raw = JSON.parse(String(formData.get("payload") ?? ""));
+  } catch {
+    return { error: "That isn't valid JSON — check for a missing comma or bracket." };
+  }
+
+  const items = normalizeVocabularyJsonPayload(raw);
+  if (!Array.isArray(items)) {
+    return { error: items.error };
+  }
+  if (items.length === 0) {
+    return { error: "No words found in this document." };
+  }
+  if (items.length > MAX_VOCABULARY_JSON_ITEMS) {
+    return { error: `Too many words — max ${MAX_VOCABULARY_JSON_ITEMS} per import.` };
+  }
+
+  const validated = items.map((item, index) => validateVocabularyJsonItem(item, index));
+  const failed = validated.filter(
+    (result): result is Extract<VocabularyJsonRowResult, { ok: false }> => !result.ok,
+  );
+
+  if (failed.length > 0) {
     return {
-      error: "Some category_slug values don't match an existing category.",
-      rowErrors: unresolvedSlugs.map(
-        (slug) => `"${slug}" not found — check the slug path (e.g. "grammar/tense").`,
-      ),
+      error: `${failed.length} word(s) have errors. Fix them and re-import.`,
+      rowErrors: failed.map((result) => `${result.label}: ${result.error}`),
     };
   }
 
-  const slugToId = new Map(resolved.map((r) => [r.slug, r.node!.id]));
-
-  const supabase = await createClient();
-  const { error } = await supabase.from("vocabulary").insert(
-    validRows.map((r) => ({
-      ...r.data,
-      node_id: r.categorySlug ? (slugToId.get(r.categorySlug) ?? null) : null,
-    })),
+  const validRows = validated.filter(
+    (result): result is Extract<VocabularyJsonRowResult, { ok: true }> => result.ok,
   );
 
-  if (error) {
-    return { error: "Import failed. Please try again." };
-  }
-
-  revalidatePath("/admin/vocabulary");
-  updateTag(VOCABULARY_TAG);
-  redirect("/admin/vocabulary");
+  return insertValidatedVocabulary(validRows);
 }
 
 export async function deleteVocabulary(formData: FormData) {
